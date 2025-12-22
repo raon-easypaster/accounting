@@ -124,6 +124,7 @@ function App() {
             await GoogleDriveUtils.init(clientId);
             await GoogleDriveUtils.signIn();
             setIsDriveConnected(true);
+            setAutoSync(true); // Enable auto sync by default
 
             // Allow user to check for existing file
             const file = await GoogleDriveUtils.findFile();
@@ -132,7 +133,7 @@ function App() {
                     await handleLoadFromDrive(file.id);
                 }
             } else {
-                alert('구글 계정이 연결되었습니다. 이제 데이터를 동기화할 수 있습니다.');
+                alert('구글 계정이 연결되었습니다. 이제 데이터가 자동으로 동기화됩니다.');
             }
         } catch (error) {
             console.error('Drive connection failed', error);
@@ -175,7 +176,7 @@ function App() {
             setLastSyncTime(new Date());
         } catch (error) {
             console.error('Sync failed', error);
-            alert('동기화에 실패했습니다.');
+            // alert('동기화에 실패했습니다.'); // Suppress alert for auto-sync
         } finally {
             setIsSyncing(false);
         }
@@ -187,7 +188,7 @@ function App() {
 
         const timer = setTimeout(() => {
             handleSyncDrive();
-        }, 5000); // Debounce 5 seconds
+        }, 2000); // Debounce 2 seconds
 
         return () => clearTimeout(timer);
     }, [transactions, donors, budgets, isDriveConnected, autoSync, isLoaded]);
