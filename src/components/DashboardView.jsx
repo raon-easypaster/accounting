@@ -31,24 +31,19 @@ ChartJS.register(
     ArcElement
 );
 
-function DashboardView({ transactions }) {
-    const stats = useMemo(() => {
-        const now = new Date();
-        const currentMonth = now.getMonth();
-        const currentYear = now.getFullYear();
+function DashboardView({ transactions, viewMode }) {
+    const isYearly = viewMode === 'YEARLY';
+    const periodLabel = isYearly ? '올해' : '이번 달';
 
-        const monthlyIncome = transactions
-            .filter(tx => {
-                const d = new Date(tx.date);
-                return d.getMonth() === currentMonth && d.getFullYear() === currentYear && tx.type === 'income';
-            })
+    const stats = useMemo(() => {
+        // Since transactions are already filtered by date in App.jsx, 
+        // we aggregate everything passed here as the "current period"
+        const periodIncome = transactions
+            .filter(tx => tx.type === 'income')
             .reduce((sum, tx) => sum + tx.amount, 0);
 
-        const monthlyExpense = transactions
-            .filter(tx => {
-                const d = new Date(tx.date);
-                return d.getMonth() === currentMonth && d.getFullYear() === currentYear && tx.type === 'expense';
-            })
+        const periodExpense = transactions
+            .filter(tx => tx.type === 'expense')
             .reduce((sum, tx) => sum + tx.amount, 0);
 
         const totalIncome = transactions
@@ -67,11 +62,8 @@ function DashboardView({ transactions }) {
             .filter(tx => tx.type === 'income' && tx.financeType === '일반재정')
             .reduce((sum, tx) => sum + tx.amount, 0);
 
-        const monthlyCarryover = transactions
-            .filter(tx => {
-                const d = new Date(tx.date);
-                return d.getMonth() === currentMonth && d.getFullYear() === currentYear && tx.type === 'income' && ['일반이월금', '특별이월금'].includes(tx.category);
-            })
+        const periodCarryover = transactions
+            .filter(tx => tx.type === 'income' && ['일반이월금', '특별이월금'].includes(tx.category))
             .reduce((sum, tx) => sum + tx.amount, 0);
 
         const totalCarryover = transactions
@@ -79,15 +71,15 @@ function DashboardView({ transactions }) {
             .reduce((sum, tx) => sum + tx.amount, 0);
 
         return {
-            monthlyIncome,
-            monthlyExpense,
+            periodIncome,
+            periodExpense,
             totalIncome,
             totalExpense,
             specialIncome,
             generalIncome,
-            monthlyCarryover,
+            periodCarryover,
             totalCarryover,
-            monthlyPureIncome: monthlyIncome - monthlyCarryover,
+            periodPureIncome: periodIncome - periodCarryover,
             totalPureIncome: totalIncome - totalCarryover
         };
     }, [transactions]);
@@ -264,13 +256,13 @@ function DashboardView({ transactions }) {
             <div className="stats-grid">
                 <div className="stat-card">
                     <div className="stat-header">
-                        <span className="stat-label">이번 달 수입</span>
+                        <span className="stat-label">{periodLabel} 수입</span>
                         <div className="stat-icon income"><TrendingUp size={16} /></div>
                     </div>
-                    <div className="stat-value">₩ {stats.monthlyIncome.toLocaleString()}</div>
+                    <div className="stat-value">₩ {stats.periodIncome.toLocaleString()}</div>
                     <div className="stat-footer" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
                         <div style={{ color: '#4b5563', fontSize: '0.8rem' }}>
-                            (이월 제외: ₩ {stats.monthlyPureIncome.toLocaleString()})
+                            (이월 제외: ₩ {stats.periodPureIncome.toLocaleString()})
                         </div>
                         <div style={{ display: 'flex', gap: '8px', fontSize: '0.8rem', marginTop: '2px' }}>
                             <span style={{ color: '#6366f1' }}>일반: {stats.generalIncome.toLocaleString()}</span>
@@ -281,10 +273,10 @@ function DashboardView({ transactions }) {
 
                 <div className="stat-card">
                     <div className="stat-header">
-                        <span className="stat-label">이번 달 지출</span>
+                        <span className="stat-label">{periodLabel} 지출</span>
                         <div className="stat-icon expense"><TrendingDown size={16} /></div>
                     </div>
-                    <div className="stat-value">₩ {stats.monthlyExpense.toLocaleString()}</div>
+                    <div className="stat-value">₩ {stats.periodExpense.toLocaleString()}</div>
                     <div className="stat-footer negative">
                         <ArrowDownRight size={14} /> 지출 관리 필요
                     </div>

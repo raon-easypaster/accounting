@@ -335,7 +335,7 @@ function App() {
                 </header>
 
                 <section className="content-area">
-                    {activeTab === 'dashboard' && <DashboardView transactions={filteredByDateTransactions} />}
+                    {activeTab === 'dashboard' && <DashboardView transactions={filteredByDateTransactions} viewMode={viewMode} />}
                     {activeTab === 'ledger' && (
                         <LedgerView
                             transactions={filteredByDateTransactions}
