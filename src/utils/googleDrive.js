@@ -125,6 +125,13 @@ export const GoogleDriveUtils = {
                 return reject('Google Drive not initialized');
             }
 
+            // Check if we already have a token
+            const existingToken = window.gapi.client.getToken();
+            if (existingToken && existingToken.access_token) {
+                console.log('Already have valid token');
+                return resolve(existingToken);
+            }
+
             tokenClient.callback = async (resp) => {
                 console.log('GoogleDriveUtils.signIn callback received:', resp);
                 if (resp.error) {
@@ -138,12 +145,18 @@ export const GoogleDriveUtils = {
                 }
             };
 
-            if (window.gapi.client.getToken() === null) {
-                console.log('Requesting new access token (prompt: consent)...');
-                tokenClient.requestAccessToken({ prompt: 'consent' });
-            } else {
-                console.log('Refreshing access token (prompt: "")...');
-                tokenClient.requestAccessToken({ prompt: '' });
+            // Use prompt: 'select_account' to force account picker (better UX)
+            console.log('Requesting access token with account selection...');
+            try {
+                tokenClient.requestAccessToken({
+                    prompt: 'select_account',
+                    // Hint to use redirect if popup fails
+                    ux_mode: 'redirect',
+                    redirect_uri: window.location.origin
+                });
+            } catch (e) {
+                console.error('requestAccessToken failed:', e);
+                reject(e);
             }
         });
     },
