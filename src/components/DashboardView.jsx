@@ -139,44 +139,40 @@ function DashboardView({ transactions, viewMode }) {
     };
 
     const handlePrintReport = () => {
-        // Derive period string from transactions if available, otherwise use current date
         let periodStr = "";
         if (transactions.length > 0) {
-            const firstDate = new Date(transactions[0].date);
-            if (viewMode === 'YEARLY') {
-                periodStr = `${firstDate.getFullYear()}년 전체`;
-            } else {
-                periodStr = `${firstDate.getFullYear()}년 ${firstDate.getMonth() + 1}월`;
-            }
+            const firstDate = new Date(transactions[transactions.length - 1].date);
+            periodStr = viewMode === 'YEARLY' ? `${firstDate.getFullYear()}년 전체` : `${firstDate.getFullYear()}년 ${firstDate.getMonth() + 1}월`;
         } else {
             const now = new Date();
             periodStr = `${now.getFullYear()}년 ${now.getMonth() + 1}월`;
         }
 
         const dateStr = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+        const balanceV = stats.totalIncome - stats.totalExpense;
+        const assetsV = 10000000;
 
-        // Calculate totals for report
-        const totalIncomeV = stats.totalIncome;
-        const totalExpenseV = stats.totalExpense;
-        const balanceV = totalIncomeV - totalExpenseV;
-        const assetsV = 10000000; // Real estate deposit
+        const incomeTableRows = Object.entries(incomeByCategory).map(([cat, amt]) => `
+            <tr><td>${cat}</td><td class="amount">${amt.toLocaleString()} 원</td></tr>
+        `).join('');
 
-        const pureIncomeV = stats.totalPureIncome;
-        const carryoverV = stats.totalCarryover;
+        const expenseTableRows = Object.entries(expenseByCategory).map(([cat, amt]) => `
+            <tr><td>${cat}</td><td class="amount">${amt.toLocaleString()} 원</td></tr>
+        `).join('');
 
-        const generalIncomeV = stats.generalIncome;
-        const specialIncomeV = stats.specialIncome;
-        const generalExpenseV = stats.generalExpense;
-        const specialExpenseV = stats.specialExpense;
-
-        // Calculate specific pure incomes
-        const generalPureIncomeV = generalIncomeV - (transactions.filter(t => t.type === 'income' && t.financeType === '일반재정' && ['일반이월금', '전년이월금'].includes(t.category)).reduce((s, t) => s + t.amount, 0));
-        const specialPureIncomeV = specialIncomeV - (transactions.filter(t => t.type === 'income' && t.financeType === '특별재정' && ['특별이월금', '전년이월금'].includes(t.category)).reduce((s, t) => s + t.amount, 0));
-
-        // Get detailed expense items sorted by date
         const expenseItems = [...transactions]
             .filter(tx => tx.type === 'expense')
             .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        const ledgerRows = expenseItems.map(item => `
+            <tr>
+                <td style="text-align: center">${item.date}</td>
+                <td>${item.category}</td>
+                <td style="text-align: center">${item.name}</td>
+                <td class="amount">${(item.amount || 0).toLocaleString()}</td>
+                <td style="white-space: normal">${item.note || ''}</td>
+            </tr>
+        `).join('');
 
         const printWindow = window.open('', '_blank');
         printWindow.document.write(`
@@ -184,199 +180,86 @@ function DashboardView({ transactions, viewMode }) {
             <head>
                 <title>라온동행교회 재정보고서 (${periodStr})</title>
                 <style>
-                    @media print {
-                        body { padding: 0; }
-                        .no-print { display: none; }
-                    }
-                    body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; padding: 40px; line-height: 1.5; color: #1e293b; }
-                    .report-wrapper { max-width: 900px; margin: 0 auto; }
-                    h1 { text-align: center; color: #0f172a; margin-bottom: 5px; font-size: 2.2rem; }
-                    .period { text-align: center; color: #0f172a; font-size: 1.5rem; font-weight: 700; margin-bottom: 5px; }
-                    .date { text-align: center; color: #64748b; margin-bottom: 40px; font-size: 1rem; }
-                    .section { margin-bottom: 45px; page-break-inside: avoid; }
-                    .section-name { font-size: 1.3rem; font-weight: 700; border-left: 6px solid #0f172a; padding-left: 14px; margin-bottom: 18px; color: #0f172a; }
-                    table { width: 100%; border-collapse: collapse; margin-bottom: 10px; table-layout: fixed; }
-                    th, td { border: 1px solid #cbd5e1; padding: 10px 12px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-                    th { background-color: #f1f5f9; text-align: center; color: #334155; font-weight: 700; font-size: 0.95rem; }
-                    td { font-size: 0.9rem; }
-                    .amount { text-align: right; font-weight: 600; font-family: 'Consolas', 'Courier New', monospace; }
-                    .total-row { background-color: #f8fafc; font-weight: 700; border-top: 2px solid #475569; }
-                    .sub-row { color: #64748b; font-size: 0.85rem; }
-                    .sub-indent { padding-left: 30px !important; }
-                    .ledger-table th:nth-child(1) { width: 90px; }
-                    .ledger-table th:nth-child(2) { width: 100px; }
-                    .ledger-table th:nth-child(3) { width: 100px; }
-                    .ledger-table th:nth-child(4) { width: 120px; }
-                    .footer { margin-top: 80px; text-align: center; font-size: 1.1rem; color: #1e293b; border-top: 1px solid #e2e8f0; padding-top: 40px; }
-                    .signature-area { margin-top: 50px; display: flex; justify-content: center; gap: 80px; }
+                    body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; padding: 40px; color: #1e293b; }
+                    .report-wrapper { max-width: 850px; margin: 0 auto; }
+                    h1 { text-align: center; margin-bottom: 5px; }
+                    .period { text-align: center; font-size: 1.4rem; font-weight: bold; margin-bottom: 30px; }
+                    .section { margin-bottom: 40px; page-break-inside: avoid; }
+                    .section-title { font-size: 1.2rem; font-weight: bold; border-left: 5px solid #000; padding-left: 10px; margin-bottom: 10px; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 5px; table-layout: fixed; }
+                    th, td { border: 1px solid #000; padding: 8px; font-size: 0.9rem; }
+                    th { background: #f8fafc; }
+                    .amount { text-align: right; }
+                    .total-row { background: #f1f5f9; font-weight: bold; }
+                    .footer { margin-top: 60px; text-align: center; }
+                    .sign { margin-top: 40px; display: flex; justify-content: center; gap: 50px; }
+                    .ver { font-size: 0.7rem; color: #ccc; text-align: right; margin-top: 20px; }
                 </style>
             </head>
             <body>
                 <div class="report-wrapper">
                     <h1>라온동행교회 재정보고서</h1>
                     <div class="period">${periodStr}</div>
-                    <p class="date">출력일: ${dateStr}</p>
+                    
+                    <div class="section">
+                        <div class="section-title">1. 종합 재정 현황</div>
+                        <table>
+                            <tr><th style="width: 70%">항목</th><th>금액</th></tr>
+                            <tr style="background: #eff6ff"><td><strong>[수입 총합계]</strong> (이월금 포함)</td><td class="amount"><strong>${stats.totalIncome.toLocaleString()} 원</strong></td></tr>
+                            <tr style="color: #64748b"><td>- 당기 순수입 (이월금 제외)</td><td class="amount">${stats.totalPureIncome.toLocaleString()} 원</td></tr>
+                            <tr style="color: #64748b"><td>- 전년 이월금 합계</td><td class="amount">${stats.totalCarryover.toLocaleString()} 원</td></tr>
+                            <tr style="background: #fef2f2"><td><strong>[지출 총합계]</strong></td><td class="amount"><strong>${stats.totalExpense.toLocaleString()} 원</strong></td></tr>
+                            <tr class="total-row" style="background: #f0fdf4"><td><strong>[현재 잔액]</strong> (가용 자산)</td><td class="amount">${balanceV.toLocaleString()} 원</td></tr>
+                        </table>
+                    </div>
 
                     <div class="section">
-                        <div class="section-name">1. 종합 재정 현황</div>
+                        <div class="section-title">2. 항목별 수입 내역</div>
                         <table>
+                            <tr><th>항목(계정)</th><th>금액</th></tr>
+                            ${incomeTableRows || '<tr><td colspan="2" style="text-align:center">내역 없음</td></tr>'}
+                            <tr class="total-row"><td>수입 합계</td><td class="amount">${stats.totalIncome.toLocaleString()} 원</td></tr>
+                        </table>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-title">3. 항목별 지출 내역</div>
+                        <table>
+                            <tr><th>항목(계정)</th><th>금액</th></tr>
+                            ${expenseTableRows || '<tr><td colspan="2" style="text-align:center">내역 없음</td></tr>'}
+                            <tr class="total-row"><td>지출 합계</td><td class="amount">${stats.totalExpense.toLocaleString()} 원</td></tr>
+                        </table>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-title">4. 지출부 상세 내역</div>
+                        <table style="font-size: 0.8rem">
                             <thead>
-                                <tr>
-                                    <th>항목 구분</th>
-                                    <th style="width: 220px; text-align: right">금액</th>
-                                </tr>
+                                <tr><th style="width: 15%">일자</th><th style="width: 20%">항목</th><th style="width: 15%">성명</th><th style="width: 20%">금액</th><th>비고</th></tr>
                             </thead>
                             <tbody>
-                                <tr style="background-color: #eff6ff">
-                                    <td><strong>[수입]</strong> 총계 (이월금 포함)</td>
-                                    <td class="amount" style="color: #1d4ed8; font-size: 1.1rem;">${totalIncomeV.toLocaleString()} 원</td>
-                                </tr>
-                                <tr class="sub-row">
-                                    <td class="sub-indent">- 당기 순수입 계 (일반+특별)</td>
-                                    <td class="amount">${pureIncomeV.toLocaleString()} 원</td>
-                                </tr>
-                                <tr class="sub-row">
-                                    <td class="sub-indent">└ 일반재정 순수입</td>
-                                    <td class="amount">${generalPureIncomeV.toLocaleString()} 원</td>
-                                </tr>
-                                <tr class="sub-row">
-                                    <td class="sub-indent">└ 특별재정 순수입</td>
-                                    <td class="amount">${specialPureIncomeV.toLocaleString()} 원</td>
-                                </tr>
-                                <tr class="sub-row">
-                                    <td class="sub-indent">- 전년 이월금 (일반+특별)</td>
-                                    <td class="amount">${carryoverV.toLocaleString()} 원</td>
-                                </tr>
-
-                                <tr style="background-color: #fef2f2">
-                                    <td style="padding-top: 15px;"><strong>[지출]</strong> 총계</td>
-                                    <td class="amount" style="color: #b91c1c; font-size: 1.1rem; padding-top: 15px;">${totalExpenseV.toLocaleString()} 원</td>
-                                </tr>
-                                <tr class="sub-row">
-                                    <td class="sub-indent">- 일반재정 지출</td>
-                                    <td class="amount">${generalExpenseV.toLocaleString()} 원</td>
-                                </tr>
-                                <tr class="sub-row">
-                                    <td class="sub-indent">- 특별재정 지출</td>
-                                    <td class="amount">${specialExpenseV.toLocaleString()} 원</td>
-                                </tr>
-
-                                <tr class="total-row" style="background-color: #f0fdf4">
-                                    <td style="font-size: 1.1rem; border-top: 2px solid #0f172a;"><strong>[잔액]</strong> 현재 고정 및 가용 자산</td>
-                                    <td class="amount" style="color: ${balanceV >= 0 ? '#15803d' : '#dc2626'}; font-size: 1.2rem; border-top: 2px solid #0f172a;">${balanceV.toLocaleString()} 원</td>
-                                </tr>
+                                ${ledgerRows || '<tr><td colspan="5" style="text-align:center">내역 없음</td></tr>'}
                             </tbody>
                         </table>
                     </div>
 
                     <div class="section">
-                        <div class="section-name">2. 세부 수입 항목별 집계</div>
+                        <div class="section-title">5. 교회 자산 현황</div>
                         <table>
-                            <thead>
-                                <tr>
-                                    <th>계정 과목</th>
-                                    <th style="width: 220px; text-align: right">금액</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${Object.entries(incomeByCategory).length > 0 ? Object.entries(incomeByCategory).map(([cat, amt]) => `
-                                    <tr>
-                                        <td>${cat}</td>
-                                        <td class="amount">${amt.toLocaleString()} 원</td>
-                                    </tr>
-                                `).join('') : '<tr><td colspan="2" style="text-align:center">수입 내역이 없습니다.</td></tr>'}
-                                <tr class="total-row">
-                                    <td>수입 총계</td>
-                                    <td class="amount">${totalIncomeV.toLocaleString()} 원</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="section">
-                        <div class="section-name">3. 세부 지출 항목별 집계</div>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>계정 과목</th>
-                                    <th style="width: 220px; text-align: right">금액</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${Object.entries(expenseByCategory).length > 0 ? Object.entries(expenseByCategory).map(([cat, amt]) => `
-                                    <tr>
-                                        <td>${cat}</td>
-                                        <td class="amount">${amt.toLocaleString()} 원</td>
-                                    </tr>
-                                `).join('') : '<tr><td colspan="2" style="text-align:center">지출 내역이 없습니다.</td></tr>'}
-                                <tr class="total-row">
-                                    <td>지출 총계</td>
-                                    <td class="amount">${totalExpenseV.toLocaleString()} 원</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="section" style="page-break-before: always;">
-                        <div class="section-name">4. 지출부 상세 내역</div>
-                        <table class="ledger-table">
-                            <thead>
-                                <tr>
-                                    <th>일자</th>
-                                    <th>항목</th>
-                                    <th>성명</th>
-                                    <th style="text-align: right">금액</th>
-                                    <th>비고</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${expenseItems.length > 0 ? expenseItems.map(item => `
-                                    <tr>
-                                        <td style="text-align: center">${item.date}</td>
-                                        <td>${item.category}</td>
-                                        <td style="text-align: center">${item.name}</td>
-                                        <td class="amount">${item.amount.toLocaleString()}</td>
-                                        <td style="white-space: normal">${item.note || ''}</td>
-                                    </tr>
-                                `).join('') : '<tr><td colspan="5" style="text-align:center">지출 상세 내역이 없습니다.</td></tr>'}
-                                <tr class="total-row">
-                                    <td colspan="3" style="text-align: center">합계</td>
-                                    <td class="amount">${totalExpenseV.toLocaleString()}</td>
-                                    <td></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="section">
-                        <div class="section-name">5. 기타 자산 현황</div>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>자산 항목</th>
-                                    <th style="width: 220px; text-align: right">금액</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>부동산 임대보증금</td>
-                                    <td class="amount">${assetsV.toLocaleString()} 원</td>
-                                </tr>
-                                <tr class="total-row">
-                                    <td>교회 총 자산 (고정+가용)</td>
-                                    <td class="amount">${(balanceV + assetsV).toLocaleString()} 원</td>
-                                </tr>
-                            </tbody>
+                            <tr><td>부동산 임대보증금</td><td class="amount">${assetsV.toLocaleString()} 원</td></tr>
+                            <tr class="total-row"><td>총 자산 (잔액+보증금)</td><td class="amount">${(balanceV + assetsV).toLocaleString()} 원</td></tr>
                         </table>
                     </div>
 
                     <div class="footer">
-                        <p>위와 같이 라온동행교회 재정 현황을 보고합니다.</p>
-                        <div class="signature-area">
-                            <span>재정 위원: ________________ (인)</span>
-                            <span>담임 목사: ________________ (인)</span>
+                        <p>위와 같이 보고합니다.</p>
+                        <p>${dateStr}</p>
+                        <div class="sign">
+                            <span>재정 위원: ____________ (인)</span>
+                            <span>담임 목사: ____________ (인)</span>
                         </div>
                     </div>
+                    <div class="ver">ver 1.2</div>
                 </div>
             </body>
             </html>
