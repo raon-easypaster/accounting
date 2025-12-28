@@ -133,10 +133,11 @@ function SettingsView({
                             <button
                                 className="sync-btn"
                                 onClick={onConnectDrive}
-                                disabled={!clientId || !clientId.endsWith('.apps.googleusercontent.com')}
+                                disabled={!clientId || !clientId.endsWith('.apps.googleusercontent.com') || isSyncing}
                                 style={{ width: '100%', justifyContent: 'center' }}
                             >
-                                <Cloud size={18} /> 구글 계정 연결
+                                <Cloud size={18} className={isSyncing ? "spin" : ""} />
+                                {isSyncing ? '연결 시도 중...' : '구글 계정 연결'}
                             </button>
                         </div>
                     ) : (
