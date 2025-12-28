@@ -167,16 +167,21 @@ function App() {
         }
     };
 
-    const handleSyncDrive = async () => {
+    const handleSyncDrive = async (isManual = false) => {
         if (!isDriveConnected) return;
         setIsSyncing(true);
         try {
             const content = { transactions, donors, budgets };
             await GoogleDriveUtils.saveFile(content);
             setLastSyncTime(new Date());
+            if (isManual) {
+                alert('구글 드라이브에 데이터를 성공적으로 저장했습니다.');
+            }
         } catch (error) {
             console.error('Sync failed', error);
-            // alert('동기화에 실패했습니다.'); // Suppress alert for auto-sync
+            if (isManual) {
+                alert('동기화에 실패했습니다. 네트워크 상태나 권한을 확인해주세요.');
+            }
         } finally {
             setIsSyncing(false);
         }

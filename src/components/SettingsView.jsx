@@ -161,7 +161,7 @@ function SettingsView({
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                                 <button
                                     className="sync-btn"
-                                    onClick={onSyncDrive}
+                                    onClick={() => onSyncDrive(true)}
                                     disabled={isSyncing}
                                     style={{ flex: 1, justifyContent: 'center' }}
                                     title="현재 데이터를 클라우드에 저장(업로드)"

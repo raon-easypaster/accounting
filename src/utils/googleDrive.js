@@ -98,49 +98,65 @@ export const GoogleDriveUtils = {
 
     // Create or Update file
     saveFile: async (content) => {
-        const file = await GoogleDriveUtils.findFile();
-        const fileContent = JSON.stringify(content, null, 2);
+        try {
+            const file = await GoogleDriveUtils.findFile();
+            const fileContent = JSON.stringify(content, null, 2);
 
-        const fileMetadata = {
-            name: DATA_FILENAME,
-            mimeType: 'application/json',
-        };
+            const fileMetadata = {
+                name: DATA_FILENAME,
+                mimeType: 'application/json',
+            };
 
-        if (file) {
-            // Update existing file
-            return await window.gapi.client.request({
-                path: `/upload/drive/v3/files/${file.id}`,
-                method: 'PATCH',
-                params: { uploadType: 'media' },
-                body: fileContent
-            });
-        } else {
-            // Create new file
-            // Multipart upload for metadata + content
-            const boundary = '-------314159265358979323846';
-            const delimiter = "\r\n--" + boundary + "\r\n";
-            const close_delim = "\r\n--" + boundary + "--";
+            if (file) {
+                // Update existing file
+                const response = await window.gapi.client.request({
+                    path: `/upload/drive/v3/files/${file.id}`,
+                    method: 'PATCH',
+                    params: { uploadType: 'media' },
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: fileContent
+                });
 
-            const contentType = 'application/json';
+                if (response.status !== 200) {
+                    throw new Error(`Failed to update file: ${response.statusText}`);
+                }
+                return response.result;
+            } else {
+                // Create new file
+                // Multipart upload for metadata + content
+                const boundary = '-------314159265358979323846';
+                const delimiter = "\r\n--" + boundary + "\r\n";
+                const close_delim = "\r\n--" + boundary + "--";
 
-            const multipartRequestBody =
-                delimiter +
-                'Content-Type: application/json\r\n\r\n' +
-                JSON.stringify(fileMetadata) +
-                delimiter +
-                'Content-Type: ' + contentType + '\r\n\r\n' +
-                fileContent +
-                close_delim;
+                const multipartRequestBody =
+                    delimiter +
+                    'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+                    JSON.stringify(fileMetadata) +
+                    delimiter +
+                    'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+                    fileContent +
+                    close_delim;
 
-            return await window.gapi.client.request({
-                path: '/upload/drive/v3/files',
-                method: 'POST',
-                params: { uploadType: 'multipart' },
-                headers: {
-                    'Content-Type': 'multipart/related; boundary="' + boundary + '"'
-                },
-                body: multipartRequestBody
-            });
+                const response = await window.gapi.client.request({
+                    path: '/upload/drive/v3/files',
+                    method: 'POST',
+                    params: { uploadType: 'multipart' },
+                    headers: {
+                        'Content-Type': 'multipart/related; boundary="' + boundary + '"'
+                    },
+                    body: multipartRequestBody
+                });
+
+                if (response.status !== 200) {
+                    throw new Error(`Failed to create file: ${response.statusText}`);
+                }
+                return response.result;
+            }
+        } catch (error) {
+            console.error('GoogleDriveUtils.saveFile Error:', error);
+            throw error;
         }
     }
 };
