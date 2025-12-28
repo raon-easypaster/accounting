@@ -102,27 +102,37 @@ function App() {
     // Init Drive if Client ID exists
     useEffect(() => {
         if (clientId && isLoaded) {
+            console.log('App: Initializing Google Drive with clientId...', clientId.substring(0, 10));
             GoogleDriveUtils.init(clientId)
                 .then(() => {
+                    console.log('App: Google Drive init complete');
                     // Check if already connected after init
-                    if (GoogleDriveUtils.isConnected()) {
+                    const connected = GoogleDriveUtils.isConnected();
+                    console.log('App: isConnected?', connected);
+                    if (connected) {
                         setIsDriveConnected(true);
                     }
                 })
-                .catch(console.error);
+                .catch(err => console.error('App: Google Drive init failed', err));
         }
     }, [clientId, isLoaded]);
 
     // Periodic check for connection (in case of popup login)
     useEffect(() => {
         if (!isDriveConnected && isLoaded && clientId) {
+            console.log('App: Starting connection polling...');
             const interval = setInterval(() => {
-                if (GoogleDriveUtils.isConnected()) {
+                const connected = GoogleDriveUtils.isConnected();
+                if (connected) {
+                    console.log('App: Connection detected via polling!');
                     setIsDriveConnected(true);
                     clearInterval(interval);
                 }
             }, 2000);
-            return () => clearInterval(interval);
+            return () => {
+                console.log('App: Stopping connection polling.');
+                clearInterval(interval);
+            };
         }
     }, [isDriveConnected, isLoaded, clientId]);
 
@@ -140,24 +150,28 @@ function App() {
 
     // Google Drive Handlers
     const handleConnectDrive = async () => {
+        console.log('App: handleConnectDrive called');
         try {
             await GoogleDriveUtils.init(clientId);
-            await GoogleDriveUtils.signIn();
+            console.log('App: init success, starting signIn');
+            const authResp = await GoogleDriveUtils.signIn();
+            console.log('App: signIn success', authResp);
+
             setIsDriveConnected(true);
             setAutoSync(true); // Enable auto sync by default
 
             // Allow user to check for existing file
             const file = await GoogleDriveUtils.findFile();
             if (file) {
-                if (window.confirm('구글 드라이브에 장부 데이터가 있습니다. 불러오시겠습니까? (현재 데이터는 덮어씌워집니다)')) {
+                if (window.confirm('구글 드라이브에 기존 장부 데이터가 있습니다. 불러오시겠습니까? (현재 데이터는 교체됩니다)')) {
                     await handleLoadFromDrive(file.id);
                 }
             } else {
-                alert('구글 계정이 연결되었습니다. 이제 데이터가 자동으로 동기화됩니다.');
+                alert('구글 계정이 성공적으로 연결되었습니다.');
             }
         } catch (error) {
-            console.error('Drive connection failed', error);
-            alert('구글 계정 연결에 실패했습니다.');
+            console.error('App: Drive connection failed', error);
+            alert('구글 계정 연결에 실패했습니다. 설정을 다시 확인해주세요.');
         }
     };
 
