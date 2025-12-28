@@ -106,6 +106,16 @@ function DashboardView({ transactions, viewMode }) {
         return data;
     }, [transactions]);
 
+    const expenseByCategory = useMemo(() => {
+        const data = {};
+        transactions
+            .filter(tx => tx.type === 'expense')
+            .forEach(tx => {
+                data[tx.category] = (data[tx.category] || 0) + tx.amount;
+            });
+        return data;
+    }, [transactions]);
+
     const pieData = {
         labels: Object.keys(incomeByCategory),
         datasets: [
@@ -140,7 +150,7 @@ function DashboardView({ transactions, viewMode }) {
                     h1 { text-align: center; color: #333; margin-bottom: 10px; }
                     .date { text-align: center; color: #666; margin-bottom: 40px; }
                     .section { margin-bottom: 30px; }
-                    .section-title { font-size: 1.2rem; font-weight: bold; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 15px; }
+                    .section-name { font-size: 1.2rem; font-weight: bold; border-bottom: 2px solid #333; padding-bottom: 5px; margin-bottom: 15px; }
                     table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
                     th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
                     th { background-color: #f8f9fa; text-align: center; }
@@ -155,11 +165,11 @@ function DashboardView({ transactions, viewMode }) {
                 <p class="date">기준일: ${dateStr}</p>
 
                 <div class="section">
-                    <div class="section-title">1. 전체 재정 현황</div>
+                    <div class="section-name">1. 전체 재정 현황</div>
                     <table>
                         <tr>
                             <th>구분</th>
-                            <th>금액</th>
+                            <th style="text-align: right">금액</th>
                         </tr>
                         <tr>
                             <td>금년 순수입 (이월금 제외)</td>
@@ -185,11 +195,11 @@ function DashboardView({ transactions, viewMode }) {
                 </div>
 
                 <div class="section">
-                    <div class="section-title">2. 자산 현황</div>
+                    <div class="section-name">2. 자산 현황</div>
                     <table>
                         <tr>
                             <th>자산명</th>
-                            <th>금액</th>
+                            <th style="text-align: right">금액</th>
                         </tr>
                         <tr>
                             <td>부동산 임대보증금</td>
@@ -202,20 +212,38 @@ function DashboardView({ transactions, viewMode }) {
                     </table>
                 </div>
 
-                <div class="section">
-                    <div class="section-title">3. 세부 수입 내역 (항목별)</div>
-                    <table>
-                        <tr>
-                            <th>항목</th>
-                            <th style="text-align: right">금액</th>
-                        </tr>
-                        ${Object.entries(incomeByCategory).map(([cat, amt]) => `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+                    <div class="section">
+                        <div class="section-name">3. 세부 수입 내역</div>
+                        <table>
                             <tr>
-                                <td>${cat}</td>
-                                <td class="amount">${amt.toLocaleString()} 원</td>
+                                <th>항목</th>
+                                <th style="text-align: right">금액</th>
                             </tr>
-                        `).join('')}
-                    </table>
+                            ${Object.entries(incomeByCategory).length > 0 ? Object.entries(incomeByCategory).map(([cat, amt]) => `
+                                <tr>
+                                    <td>${cat}</td>
+                                    <td class="amount">${amt.toLocaleString()} 원</td>
+                                </tr>
+                            `).join('') : '<tr><td colspan="2" style="text-align:center">데이터 없음</td></tr>'}
+                        </table>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-name">4. 세부 지출 내역</div>
+                        <table>
+                            <tr>
+                                <th>항목</th>
+                                <th style="text-align: right">금액</th>
+                            </tr>
+                            ${Object.entries(expenseByCategory).length > 0 ? Object.entries(expenseByCategory).map(([cat, amt]) => `
+                                <tr>
+                                    <td>${cat}</td>
+                                    <td class="amount">${amt.toLocaleString()} 원</td>
+                                </tr>
+                            `).join('') : '<tr><td colspan="2" style="text-align:center">데이터 없음</td></tr>'}
+                        </table>
+                    </div>
                 </div>
 
                 <div class="footer">
