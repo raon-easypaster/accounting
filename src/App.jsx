@@ -265,8 +265,13 @@ function App() {
                 </button>
             </nav>
             <div className="sidebar-footer">
-                <button className="sync-btn">
-                    <Cloud size={18} /> Google Drive 동기화
+                <button
+                    className={`sync-btn ${isDriveConnected ? 'connected' : ''}`}
+                    onClick={isDriveConnected ? () => handleSyncDrive(true) : () => setActiveTab('settings')}
+                    disabled={isSyncing}
+                >
+                    <Cloud size={18} className={isSyncing ? "spin" : ""} />
+                    {isDriveConnected ? (isSyncing ? '동기화 중...' : '데이터 동기화') : 'Google Drive 연결'}
                 </button>
             </div>
         </div>

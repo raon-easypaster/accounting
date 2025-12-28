@@ -115,6 +115,31 @@ body {
     background-color: var(--primary-light);
 }
 
+.sync-btn.connected {
+    background-color: white;
+    color: var(--secondary);
+    border-color: var(--secondary);
+}
+
+.sync-btn.connected:hover {
+    background-color: #f0fdf4;
+    /* Very light secondary bg */
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+}
+
 /* Main Content */
 .main-content {
     flex: 1;
