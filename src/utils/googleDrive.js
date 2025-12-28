@@ -10,7 +10,7 @@ let currentClientId = null;
 
 export const GoogleDriveUtils = {
     // Initialize GAPI and GIS
-    init: (clientId, apiKey) => {
+    init: (clientId) => {
         if (gapiInited && gisInited && currentClientId === clientId && tokenClient) {
             return Promise.resolve();
         }
@@ -23,42 +23,34 @@ export const GoogleDriveUtils = {
         currentClientId = clientId;
 
         initPromise = new Promise((resolve, reject) => {
-            // Safety timeout (30 seconds)
             const timeout = setTimeout(() => {
-                reject('Google Drive initialization timed out');
+                const msg = '구글 보안 라이브러리를 불러오는 데 실패했습니다 (Timeout). 인터넷 연결을 확인하거나 잠시 후 다시 시도해 주세요.';
+                console.error(msg);
+                reject(msg);
                 initPromise = null;
-            }, 30000);
+            }, 15000); // Reduce timeout to 15s for better UX
 
-            const loadGapi = () => {
+            const injectScript = (src, id) => {
                 return new Promise((res) => {
-                    if (window.gapi) return res();
+                    if (document.getElementById(id)) return res();
                     const script = document.createElement('script');
-                    script.src = 'https://apis.google.com/js/api.js';
+                    script.src = src;
+                    script.id = id;
                     script.async = true;
                     script.defer = true;
                     script.onload = () => res();
-                    script.onerror = () => reject('Failed to load GAPI script');
+                    script.onerror = () => reject(`Failed to load script: ${src}`);
                     document.body.appendChild(script);
                 });
             };
 
-            const loadGis = () => {
-                return new Promise((res) => {
-                    if (window.google?.accounts?.oauth2) return res();
-                    const script = document.createElement('script');
-                    script.src = 'https://accounts.google.com/gsi/client';
-                    script.async = true;
-                    script.defer = true;
-                    script.onload = () => res();
-                    script.onerror = () => reject('Failed to load GIS script');
-                    document.body.appendChild(script);
-                });
-            };
+            Promise.all([
+                injectScript('https://apis.google.com/js/api.js', 'gapi-js'),
+                injectScript('https://accounts.google.com/gsi/client', 'gis-js')
+            ]).then(async () => {
+                console.log('Scripts injected, checking readiness...');
 
-            Promise.all([loadGapi(), loadGis()]).then(async () => {
-                console.log('Scripts loaded, initializing client...');
-
-                // Init GIS tokenClient
+                // 1. GIS Init (Independent of GAPI)
                 try {
                     if (!tokenClient || currentClientId !== clientId) {
                         tokenClient = window.google.accounts.oauth2.initTokenClient({
@@ -67,29 +59,40 @@ export const GoogleDriveUtils = {
                             callback: '', // defined at request time
                         });
                         gisInited = true;
-                        console.log('GIS tokenClient initialized');
+                        console.log('GIS tokenClient ready');
                     }
                 } catch (e) {
                     console.error('GIS init failed', e);
-                    return reject(e);
+                    return reject('GIS 초기화 실패: ' + e.message);
                 }
 
-                // Init GAPI client
-                window.gapi.load('client', async () => {
-                    try {
-                        await window.gapi.client.init({
-                            apiKey: apiKey,
-                            discoveryDocs: [DISCOVERY_DOC],
-                        });
-                        gapiInited = true;
-                        console.log('GAPI client initialized');
+                // 2. GAPI Load Library
+                window.gapi.load('client', {
+                    callback: async () => {
+                        try {
+                            // Using load() instead of init({apiKey, discoveryDocs}) for better reliability
+                            await window.gapi.client.load('drive', 'v3');
+                            gapiInited = true;
+                            console.log('GAPI drive library ready');
+                            clearTimeout(timeout);
+                            resolve();
+                            initPromise = null;
+                        } catch (err) {
+                            console.error('GAPI load failed', err);
+                            clearTimeout(timeout);
+                            reject('GAPI 라이브러리 로드 실패');
+                            initPromise = null;
+                        }
+                    },
+                    onerror: () => {
                         clearTimeout(timeout);
-                        resolve();
+                        reject('GAPI 로딩 오류');
                         initPromise = null;
-                    } catch (err) {
-                        console.error('GAPI init failed', err);
+                    },
+                    timeout: 5000,
+                    ontimeout: () => {
                         clearTimeout(timeout);
-                        reject(err);
+                        reject('GAPI 로딩 시간 초과');
                         initPromise = null;
                     }
                 });
