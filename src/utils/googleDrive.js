@@ -101,45 +101,40 @@ export const GoogleDriveUtils = {
         try {
             const file = await GoogleDriveUtils.findFile();
             const fileContent = JSON.stringify(content, null, 2);
+            const boundary = '-------314159265358979323846';
+            const delimiter = "\r\n--" + boundary + "\r\n";
+            const close_delim = "\r\n--" + boundary + "--";
 
             const fileMetadata = {
                 name: DATA_FILENAME,
                 mimeType: 'application/json',
+                description: `Last updated: ${new Date().toLocaleString()}`
             };
 
+            const multipartRequestBody =
+                delimiter +
+                'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+                JSON.stringify(fileMetadata) +
+                delimiter +
+                'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+                fileContent +
+                close_delim;
+
+            let response;
             if (file) {
-                // Update existing file
-                const response = await window.gapi.client.request({
+                // Update existing file using multipart
+                response = await window.gapi.client.request({
                     path: `/upload/drive/v3/files/${file.id}`,
                     method: 'PATCH',
-                    params: { uploadType: 'media' },
+                    params: { uploadType: 'multipart' },
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'multipart/related; boundary="' + boundary + '"'
                     },
-                    body: fileContent
+                    body: multipartRequestBody
                 });
-
-                if (response.status !== 200) {
-                    throw new Error(`Failed to update file: ${response.statusText}`);
-                }
-                return response.result;
             } else {
-                // Create new file
-                // Multipart upload for metadata + content
-                const boundary = '-------314159265358979323846';
-                const delimiter = "\r\n--" + boundary + "\r\n";
-                const close_delim = "\r\n--" + boundary + "--";
-
-                const multipartRequestBody =
-                    delimiter +
-                    'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
-                    JSON.stringify(fileMetadata) +
-                    delimiter +
-                    'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
-                    fileContent +
-                    close_delim;
-
-                const response = await window.gapi.client.request({
+                // Create new file using multipart
+                response = await window.gapi.client.request({
                     path: '/upload/drive/v3/files',
                     method: 'POST',
                     params: { uploadType: 'multipart' },
@@ -148,12 +143,12 @@ export const GoogleDriveUtils = {
                     },
                     body: multipartRequestBody
                 });
-
-                if (response.status !== 200) {
-                    throw new Error(`Failed to create file: ${response.statusText}`);
-                }
-                return response.result;
             }
+
+            if (response.status !== 200) {
+                throw new Error(`Google Drive API Error: ${response.status} ${response.statusText}`);
+            }
+            return response.result;
         } catch (error) {
             console.error('GoogleDriveUtils.saveFile Error:', error);
             throw error;
