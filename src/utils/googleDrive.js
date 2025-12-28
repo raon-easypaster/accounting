@@ -66,19 +66,31 @@ export const GoogleDriveUtils = {
 
     // Authenticate User
     signIn: () => {
+        console.log('GoogleDriveUtils.signIn starting...');
         return new Promise((resolve, reject) => {
-            if (!tokenClient) return reject('Google Drive not initialized');
+            if (!tokenClient) {
+                console.error('tokenClient not initialized');
+                return reject('Google Drive not initialized');
+            }
 
             tokenClient.callback = async (resp) => {
+                console.log('GoogleDriveUtils.signIn callback received:', resp);
                 if (resp.error) {
+                    console.error('Sign-in error:', resp.error);
                     reject(resp);
+                } else {
+                    // Critical: set the token in GAPI client
+                    window.gapi.client.setToken(resp);
+                    console.log('GAPI token set successfully');
+                    resolve(resp);
                 }
-                resolve(resp);
             };
 
             if (window.gapi.client.getToken() === null) {
+                console.log('Requesting new access token (prompt: consent)...');
                 tokenClient.requestAccessToken({ prompt: 'consent' });
             } else {
+                console.log('Refreshing access token (prompt: "")...');
                 tokenClient.requestAccessToken({ prompt: '' });
             }
         });
@@ -86,35 +98,41 @@ export const GoogleDriveUtils = {
 
     // Sign Out
     signOut: () => {
+        console.log('GoogleDriveUtils.signOut starting...');
         const token = window.gapi.client.getToken();
         if (token !== null) {
             window.google.accounts.oauth2.revoke(token.access_token);
-            window.gapi.client.setToken('');
+            window.gapi.client.setToken(null);
+            console.log('Token revoked and cleared');
         }
     },
 
     // Search for existing data file
     findFile: async () => {
+        console.log('GoogleDriveUtils.findFile searching for:', DATA_FILENAME);
         const response = await window.gapi.client.drive.files.list({
             q: `name = '${DATA_FILENAME}' and trashed = false`,
             fields: 'files(id, name)',
             spaces: 'drive',
         });
         const files = response.result.files;
+        console.log('Search results:', files);
         return files && files.length > 0 ? files[0] : null;
     },
 
     // Load data from file
     loadFile: async (fileId) => {
+        console.log('GoogleDriveUtils.loadFile with id:', fileId);
         const response = await window.gapi.client.drive.files.get({
             fileId: fileId,
             alt: 'media',
         });
-        return response.result; // Should be the JSON content
+        return response.result;
     },
 
     // Create or Update file
     saveFile: async (content) => {
+        console.log('GoogleDriveUtils.saveFile starting...');
         try {
             const file = await GoogleDriveUtils.findFile();
             const fileContent = JSON.stringify(content, null, 2);
@@ -139,6 +157,7 @@ export const GoogleDriveUtils = {
 
             let response;
             if (file) {
+                console.log('Updating existing file:', file.id);
                 // Update existing file using multipart
                 response = await window.gapi.client.request({
                     path: `/upload/drive/v3/files/${file.id}`,
@@ -150,6 +169,7 @@ export const GoogleDriveUtils = {
                     body: multipartRequestBody
                 });
             } else {
+                console.log('Creating new file...');
                 // Create new file using multipart
                 response = await window.gapi.client.request({
                     path: '/upload/drive/v3/files',
@@ -162,6 +182,7 @@ export const GoogleDriveUtils = {
                 });
             }
 
+            console.log('Save response status:', response.status);
             if (response.status !== 200) {
                 throw new Error(`Google Drive API Error: ${response.status} ${response.statusText}`);
             }
