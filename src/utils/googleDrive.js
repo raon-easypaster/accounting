@@ -5,19 +5,31 @@ const DATA_FILENAME = 'raon_church_ledger_data.json';
 let tokenClient;
 let gapiInited = false;
 let gisInited = false;
+let initPromise = null;
+let currentClientId = null;
 
 export const GoogleDriveUtils = {
     // Initialize GAPI and GIS
     init: (clientId, apiKey) => {
-        if (gapiInited && gisInited) return Promise.resolve();
+        // If already inited with same ID, reuse
+        if (gapiInited && gisInited && currentClientId === clientId) {
+            return Promise.resolve();
+        }
 
-        return new Promise((resolve, reject) => {
-            if (!document.querySelector('script[src="https://apis.google.com/js/api.js"]')) {
-                const script1 = document.createElement('script');
-                script1.src = 'https://apis.google.com/js/api.js';
-                script1.async = true;
-                script1.defer = true;
-                script1.onload = () => {
+        // If currently initing, return the existing promise
+        if (initPromise && currentClientId === clientId) {
+            return initPromise;
+        }
+
+        console.log('GoogleDriveUtils.init starting for clientId:', clientId.substring(0, 10) + '...');
+        currentClientId = clientId;
+
+        initPromise = new Promise((resolve, reject) => {
+            let scriptsLoadedCount = 0;
+            const onScriptLoaded = () => {
+                scriptsLoadedCount++;
+                if (scriptsLoadedCount === 2) {
+                    console.log('GoogleDriveUtils: All scripts loaded, proceeding to gapi.client.init');
                     window.gapi.load('client', async () => {
                         try {
                             await window.gapi.client.init({
@@ -25,34 +37,63 @@ export const GoogleDriveUtils = {
                                 discoveryDocs: [DISCOVERY_DOC],
                             });
                             gapiInited = true;
-                            if (gisInited) resolve();
+                            console.log('GoogleDriveUtils: gapi.client.init success');
+                            if (gisInited) {
+                                resolve();
+                                initPromise = null; // Reset singleton after success
+                            }
                         } catch (err) {
+                            console.error('GoogleDriveUtils: gapi.client.init failed', err);
                             reject(err);
+                            initPromise = null;
                         }
                     });
+                }
+            };
+
+            // Load GAPI
+            if (!document.querySelector('script[src="https://apis.google.com/js/api.js"]')) {
+                const script1 = document.createElement('script');
+                script1.src = 'https://apis.google.com/js/api.js';
+                script1.async = true;
+                script1.defer = true;
+                script1.onload = onScriptLoaded;
+                script1.onerror = () => {
+                    console.error('Failed to load GAPI script');
+                    reject('GAPI script load failed');
                 };
                 document.body.appendChild(script1);
-            } else if (gapiInited && gisInited) {
-                resolve();
+            } else {
+                gapiInited ? onScriptLoaded() : (window.gapi ? onScriptLoaded() : setTimeout(onScriptLoaded, 500));
             }
 
+            // Load GIS
             if (!document.querySelector('script[src="https://accounts.google.com/gsi/client"]')) {
                 const script2 = document.createElement('script');
                 script2.src = 'https://accounts.google.com/gsi/client';
                 script2.async = true;
                 script2.defer = true;
                 script2.onload = () => {
+                    console.log('GoogleDriveUtils: GIS script loaded, initializing tokenClient');
                     tokenClient = window.google.accounts.oauth2.initTokenClient({
                         client_id: clientId,
                         scope: SCOPES,
                         callback: '', // defined at request time
                     });
                     gisInited = true;
-                    if (gapiInited) resolve();
+                    onScriptLoaded();
+                };
+                script2.onerror = () => {
+                    console.error('Failed to load GIS script');
+                    reject('GIS script load failed');
                 };
                 document.body.appendChild(script2);
+            } else {
+                gisInited ? onScriptLoaded() : (window.google?.accounts?.oauth2 ? onScriptLoaded() : setTimeout(onScriptLoaded, 500));
             }
         });
+
+        return initPromise;
     },
 
     // Check if currently connected
