@@ -151,6 +151,7 @@ function App() {
     // Google Drive Handlers
     const handleConnectDrive = async () => {
         console.log('App: handleConnectDrive called');
+        setIsSyncing(true);
         try {
             await GoogleDriveUtils.init(clientId);
             console.log('App: init success, starting signIn');
@@ -171,7 +172,12 @@ function App() {
             }
         } catch (error) {
             console.error('App: Drive connection failed', error);
-            alert('구글 계정 연결에 실패했습니다. 설정을 다시 확인해주세요.');
+            // Check if it's a specific GIS error
+            const errorMsg = error?.error === 'access_denied' ? '접근이 거부되었습니다. (취소함)' :
+                error?.details || '구글 계정 연결에 실패했습니다. 설정을 다시 확인해주세요.';
+            alert(`동기화 오류: ${errorMsg}`);
+        } finally {
+            setIsSyncing(false);
         }
     };
 
