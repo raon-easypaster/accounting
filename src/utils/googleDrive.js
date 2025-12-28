@@ -9,42 +9,59 @@ let gisInited = false;
 export const GoogleDriveUtils = {
     // Initialize GAPI and GIS
     init: (clientId, apiKey) => {
-        return new Promise((resolve, reject) => {
-            const script1 = document.createElement('script');
-            script1.src = 'https://apis.google.com/js/api.js';
-            script1.async = true;
-            script1.defer = true;
-            script1.onload = () => {
-                window.gapi.load('client', async () => {
-                    try {
-                        await window.gapi.client.init({
-                            apiKey: apiKey,
-                            discoveryDocs: [DISCOVERY_DOC],
-                        });
-                        gapiInited = true;
-                        if (gisInited) resolve();
-                    } catch (err) {
-                        reject(err);
-                    }
-                });
-            };
-            document.body.appendChild(script1);
+        if (gapiInited && gisInited) return Promise.resolve();
 
-            const script2 = document.createElement('script');
-            script2.src = 'https://accounts.google.com/gsi/client';
-            script2.async = true;
-            script2.defer = true;
-            script2.onload = () => {
-                tokenClient = window.google.accounts.oauth2.initTokenClient({
-                    client_id: clientId,
-                    scope: SCOPES,
-                    callback: '', // defined at request time
-                });
-                gisInited = true;
-                if (gapiInited) resolve();
-            };
-            document.body.appendChild(script2);
+        return new Promise((resolve, reject) => {
+            if (!document.querySelector('script[src="https://apis.google.com/js/api.js"]')) {
+                const script1 = document.createElement('script');
+                script1.src = 'https://apis.google.com/js/api.js';
+                script1.async = true;
+                script1.defer = true;
+                script1.onload = () => {
+                    window.gapi.load('client', async () => {
+                        try {
+                            await window.gapi.client.init({
+                                apiKey: apiKey,
+                                discoveryDocs: [DISCOVERY_DOC],
+                            });
+                            gapiInited = true;
+                            if (gisInited) resolve();
+                        } catch (err) {
+                            reject(err);
+                        }
+                    });
+                };
+                document.body.appendChild(script1);
+            } else if (gapiInited && gisInited) {
+                resolve();
+            }
+
+            if (!document.querySelector('script[src="https://accounts.google.com/gsi/client"]')) {
+                const script2 = document.createElement('script');
+                script2.src = 'https://accounts.google.com/gsi/client';
+                script2.async = true;
+                script2.defer = true;
+                script2.onload = () => {
+                    tokenClient = window.google.accounts.oauth2.initTokenClient({
+                        client_id: clientId,
+                        scope: SCOPES,
+                        callback: '', // defined at request time
+                    });
+                    gisInited = true;
+                    if (gapiInited) resolve();
+                };
+                document.body.appendChild(script2);
+            }
         });
+    },
+
+    // Check if currently connected
+    isConnected: () => {
+        try {
+            return !!(window.gapi?.client?.getToken());
+        } catch (e) {
+            return false;
+        }
     },
 
     // Authenticate User

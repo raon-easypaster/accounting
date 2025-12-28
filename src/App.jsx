@@ -101,10 +101,30 @@ function App() {
 
     // Init Drive if Client ID exists
     useEffect(() => {
-        if (clientId) {
-            GoogleDriveUtils.init(clientId).catch(console.error);
+        if (clientId && isLoaded) {
+            GoogleDriveUtils.init(clientId)
+                .then(() => {
+                    // Check if already connected after init
+                    if (GoogleDriveUtils.isConnected()) {
+                        setIsDriveConnected(true);
+                    }
+                })
+                .catch(console.error);
         }
-    }, [clientId]);
+    }, [clientId, isLoaded]);
+
+    // Periodic check for connection (in case of popup login)
+    useEffect(() => {
+        if (!isDriveConnected && isLoaded && clientId) {
+            const interval = setInterval(() => {
+                if (GoogleDriveUtils.isConnected()) {
+                    setIsDriveConnected(true);
+                    clearInterval(interval);
+                }
+            }, 2000);
+            return () => clearInterval(interval);
+        }
+    }, [isDriveConnected, isLoaded, clientId]);
 
     // Sync to localStorage
     useEffect(() => {
