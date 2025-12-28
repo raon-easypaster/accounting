@@ -139,6 +139,20 @@ function DashboardView({ transactions, viewMode }) {
     };
 
     const handlePrintReport = () => {
+        // Derive period string from transactions if available, otherwise use current date
+        let periodStr = "";
+        if (transactions.length > 0) {
+            const firstDate = new Date(transactions[0].date);
+            if (viewMode === 'YEARLY') {
+                periodStr = `${firstDate.getFullYear()}년 전체`;
+            } else {
+                periodStr = `${firstDate.getFullYear()}년 ${firstDate.getMonth() + 1}월`;
+            }
+        } else {
+            const now = new Date();
+            periodStr = `${now.getFullYear()}년 ${now.getMonth() + 1}월`;
+        }
+
         const dateStr = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
 
         // Calculate totals for report
@@ -159,37 +173,49 @@ function DashboardView({ transactions, viewMode }) {
         const generalPureIncomeV = generalIncomeV - (transactions.filter(t => t.type === 'income' && t.financeType === '일반재정' && ['일반이월금', '전년이월금'].includes(t.category)).reduce((s, t) => s + t.amount, 0));
         const specialPureIncomeV = specialIncomeV - (transactions.filter(t => t.type === 'income' && t.financeType === '특별재정' && ['특별이월금', '전년이월금'].includes(t.category)).reduce((s, t) => s + t.amount, 0));
 
+        // Get detailed expense items sorted by date
+        const expenseItems = [...transactions]
+            .filter(tx => tx.type === 'expense')
+            .sort((a, b) => new Date(a.date) - new Date(b.date));
+
         const printWindow = window.open('', '_blank');
         printWindow.document.write(`
             <html>
             <head>
-                <title>라온동행교회 재정보고서 - ${dateStr}</title>
+                <title>라온동행교회 재정보고서 (${periodStr})</title>
                 <style>
                     @media print {
                         body { padding: 0; }
                         .no-print { display: none; }
                     }
-                    body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; padding: 40px; line-height: 1.6; color: #334155; }
-                    .report-wrapper { max-width: 800px; margin: 0 auto; }
+                    body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; padding: 40px; line-height: 1.5; color: #1e293b; }
+                    .report-wrapper { max-width: 900px; margin: 0 auto; }
                     h1 { text-align: center; color: #0f172a; margin-bottom: 5px; font-size: 2.2rem; }
-                    .date { text-align: center; color: #64748b; margin-bottom: 40px; font-size: 1.1rem; }
-                    .section { margin-bottom: 40px; page-break-inside: avoid; }
-                    .section-name { font-size: 1.3rem; font-weight: 700; border-left: 5px solid #0f172a; padding-left: 12px; margin-bottom: 15px; color: #0f172a; }
-                    table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-                    th, td { border: 1px solid #cbd5e1; padding: 12px 15px; text-align: left; }
-                    th { background-color: #f1f5f9; text-align: center; color: #334155; font-weight: 600; }
-                    .amount { text-align: right; font-weight: 600; font-family: 'Courier New', Courier, monospace; }
-                    .total-row { background-color: #f8fafc; font-weight: 700; border-top: 2px solid #64748b; }
-                    .sub-row { color: #64748b; font-size: 0.95rem; }
-                    .sub-indent { padding-left: 35px !important; }
+                    .period { text-align: center; color: #0f172a; font-size: 1.5rem; font-weight: 700; margin-bottom: 5px; }
+                    .date { text-align: center; color: #64748b; margin-bottom: 40px; font-size: 1rem; }
+                    .section { margin-bottom: 45px; page-break-inside: avoid; }
+                    .section-name { font-size: 1.3rem; font-weight: 700; border-left: 6px solid #0f172a; padding-left: 14px; margin-bottom: 18px; color: #0f172a; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 10px; table-layout: fixed; }
+                    th, td { border: 1px solid #cbd5e1; padding: 10px 12px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+                    th { background-color: #f1f5f9; text-align: center; color: #334155; font-weight: 700; font-size: 0.95rem; }
+                    td { font-size: 0.9rem; }
+                    .amount { text-align: right; font-weight: 600; font-family: 'Consolas', 'Courier New', monospace; }
+                    .total-row { background-color: #f8fafc; font-weight: 700; border-top: 2px solid #475569; }
+                    .sub-row { color: #64748b; font-size: 0.85rem; }
+                    .sub-indent { padding-left: 30px !important; }
+                    .ledger-table th:nth-child(1) { width: 90px; }
+                    .ledger-table th:nth-child(2) { width: 100px; }
+                    .ledger-table th:nth-child(3) { width: 100px; }
+                    .ledger-table th:nth-child(4) { width: 120px; }
                     .footer { margin-top: 80px; text-align: center; font-size: 1.1rem; color: #1e293b; border-top: 1px solid #e2e8f0; padding-top: 40px; }
-                    .signature-area { margin-top: 40px; display: flex; justify-content: center; gap: 60px; }
+                    .signature-area { margin-top: 50px; display: flex; justify-content: center; gap: 80px; }
                 </style>
             </head>
             <body>
                 <div class="report-wrapper">
                     <h1>라온동행교회 재정보고서</h1>
-                    <p class="date">기준일: ${dateStr}</p>
+                    <div class="period">${periodStr}</div>
+                    <p class="date">출력일: ${dateStr}</p>
 
                     <div class="section">
                         <div class="section-name">1. 종합 재정 현황</div>
@@ -197,7 +223,7 @@ function DashboardView({ transactions, viewMode }) {
                             <thead>
                                 <tr>
                                     <th>항목 구분</th>
-                                    <th style="width: 200px; text-align: right">금액</th>
+                                    <th style="width: 220px; text-align: right">금액</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -244,12 +270,12 @@ function DashboardView({ transactions, viewMode }) {
                     </div>
 
                     <div class="section">
-                        <div class="section-name">2. 세부 수입 내역</div>
+                        <div class="section-name">2. 세부 수입 항목별 집계</div>
                         <table>
                             <thead>
                                 <tr>
                                     <th>계정 과목</th>
-                                    <th style="width: 200px; text-align: right">금액</th>
+                                    <th style="width: 220px; text-align: right">금액</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -260,7 +286,7 @@ function DashboardView({ transactions, viewMode }) {
                                     </tr>
                                 `).join('') : '<tr><td colspan="2" style="text-align:center">수입 내역이 없습니다.</td></tr>'}
                                 <tr class="total-row">
-                                    <td>수입 합계</td>
+                                    <td>수입 총계</td>
                                     <td class="amount">${totalIncomeV.toLocaleString()} 원</td>
                                 </tr>
                             </tbody>
@@ -268,12 +294,12 @@ function DashboardView({ transactions, viewMode }) {
                     </div>
 
                     <div class="section">
-                        <div class="section-name">3. 세부 지출 내역</div>
+                        <div class="section-name">3. 세부 지출 항목별 집계</div>
                         <table>
                             <thead>
                                 <tr>
                                     <th>계정 과목</th>
-                                    <th style="width: 200px; text-align: right">금액</th>
+                                    <th style="width: 220px; text-align: right">금액</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -284,20 +310,51 @@ function DashboardView({ transactions, viewMode }) {
                                     </tr>
                                 `).join('') : '<tr><td colspan="2" style="text-align:center">지출 내역이 없습니다.</td></tr>'}
                                 <tr class="total-row">
-                                    <td>지출 합계</td>
+                                    <td>지출 총계</td>
                                     <td class="amount">${totalExpenseV.toLocaleString()} 원</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
 
+                    <div class="section" style="page-break-before: always;">
+                        <div class="section-name">4. 지출부 상세 내역</div>
+                        <table class="ledger-table">
+                            <thead>
+                                <tr>
+                                    <th>일자</th>
+                                    <th>항목</th>
+                                    <th>성명</th>
+                                    <th style="text-align: right">금액</th>
+                                    <th>비고</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${expenseItems.length > 0 ? expenseItems.map(item => `
+                                    <tr>
+                                        <td style="text-align: center">${item.date}</td>
+                                        <td>${item.category}</td>
+                                        <td style="text-align: center">${item.name}</td>
+                                        <td class="amount">${item.amount.toLocaleString()}</td>
+                                        <td style="white-space: normal">${item.note || ''}</td>
+                                    </tr>
+                                `).join('') : '<tr><td colspan="5" style="text-align:center">지출 상세 내역이 없습니다.</td></tr>'}
+                                <tr class="total-row">
+                                    <td colspan="3" style="text-align: center">합계</td>
+                                    <td class="amount">${totalExpenseV.toLocaleString()}</td>
+                                    <td></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
                     <div class="section">
-                        <div class="section-name">4. 기타 자산 현황</div>
+                        <div class="section-name">5. 기타 자산 현황</div>
                         <table>
                             <thead>
                                 <tr>
                                     <th>자산 항목</th>
-                                    <th style="width: 200px; text-align: right">금액</th>
+                                    <th style="width: 220px; text-align: right">금액</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -306,7 +363,7 @@ function DashboardView({ transactions, viewMode }) {
                                     <td class="amount">${assetsV.toLocaleString()} 원</td>
                                 </tr>
                                 <tr class="total-row">
-                                    <td>총 자산 고지 (잔액 포함)</td>
+                                    <td>교회 총 자산 (고정+가용)</td>
                                     <td class="amount">${(balanceV + assetsV).toLocaleString()} 원</td>
                                 </tr>
                             </tbody>
