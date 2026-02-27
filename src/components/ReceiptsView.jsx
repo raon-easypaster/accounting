@@ -6,6 +6,14 @@ import 'jspdf-autotable';
 function ReceiptsView({ transactions, donors }) {
     const [selectedDonor, setSelectedDonor] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+
+    const availableYears = useMemo(() => {
+        const years = new Set(transactions.map(tx => new Date(tx.date).getFullYear().toString()));
+        // Ensure current year is included even if no transactions
+        years.add(new Date().getFullYear().toString());
+        return Array.from(years).sort((a, b) => b - a);
+    }, [transactions]);
 
     const filteredDonors = useMemo(() => {
         return donors.filter(name => name.includes(searchQuery));
@@ -13,19 +21,20 @@ function ReceiptsView({ transactions, donors }) {
 
     const donorStats = useMemo(() => {
         if (!selectedDonor) return null;
-        const donorTxs = transactions.filter(tx => tx.name === selectedDonor && tx.type === 'income');
+        const donorTxs = transactions.filter(tx => {
+            const txDate = new Date(tx.date);
+            return tx.name === selectedDonor &&
+                tx.type === 'income' &&
+                txDate.getFullYear().toString() === selectedYear;
+        });
         const total = donorTxs.reduce((sum, tx) => sum + tx.amount, 0);
         return { transactions: donorTxs, total };
-    }, [selectedDonor, transactions]);
+    }, [selectedDonor, transactions, selectedYear]);
 
     const generatePDF = () => {
         if (!selectedDonor || !donorStats) return;
 
         const doc = new jsPDF();
-
-        // Use a font that supports Korean (if available in jspdf, or use default)
-        // Note: Standard jsPDF fonts don't support Korean well without custom font files (.ttf)
-        // For this demo, we'll focus on layout. In reality, a custom font would be loaded.
 
         doc.setFontSize(22);
         doc.text('기 부 금 영 수 증', 105, 20, { align: 'center' });
@@ -33,7 +42,8 @@ function ReceiptsView({ transactions, donors }) {
         doc.setFontSize(12);
         doc.text(`성 명: ${selectedDonor}`, 20, 40);
         doc.text(`기 관 명: 라온동행교회`, 20, 50);
-        doc.text(`발행일자: ${new Date().toLocaleDateString()}`, 20, 60);
+        doc.text(`발행년도: ${selectedYear}년`, 20, 60);
+        doc.text(`발행일자: ${new Date().toLocaleDateString()}`, 20, 70);
 
         const tableData = donorStats.transactions.map(tx => [
             tx.date,
@@ -43,7 +53,7 @@ function ReceiptsView({ transactions, donors }) {
         ]);
 
         doc.autoTable({
-            startY: 70,
+            startY: 80,
             head: [['일자', '재정구분', '항목', '금액']],
             body: tableData,
         });
@@ -56,7 +66,7 @@ function ReceiptsView({ transactions, donors }) {
         doc.text('위와 같이 기부금을 영수함', 105, finalY + 40, { align: 'center' });
         doc.text('라온동행교회 담임목사 (인)', 105, finalY + 50, { align: 'center' });
 
-        doc.save(`${selectedDonor}_기부금영수증.pdf`);
+        doc.save(`${selectedDonor}_${selectedYear}년_기부금영수증.pdf`);
     };
 
     return (
@@ -66,17 +76,43 @@ function ReceiptsView({ transactions, donors }) {
                 <p className="text-muted">교인별 헌금 내역을 확인하고 영수증을 출력할 수 있습니다.</p>
             </div>
 
-            <div className="receipts-grid" style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem', marginTop: '2rem' }}>
+            <div className="receipts-grid" style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '2rem', marginTop: '2rem' }}>
                 <div className="donor-selector card shadow-sm p-4" style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '1.5rem' }}>
-                    <div className="search-bar" style={{ width: '100%', marginBottom: '1rem' }}>
-                        <Search size={16} />
-                        <input
-                            type="text"
-                            placeholder="이름 검색..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
+                    <div style={{ marginBottom: '1.5rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.85rem', color: '#64748b', marginBottom: '0.5rem', fontWeight: '500' }}>조회 연도 선택</label>
+                        <select
+                            value={selectedYear}
+                            onChange={(e) => setSelectedYear(e.target.value)}
+                            style={{
+                                width: '100%',
+                                padding: '0.75rem',
+                                borderRadius: '10px',
+                                border: '1px solid #e2e8f0',
+                                outline: 'none',
+                                fontSize: '0.9rem',
+                                background: 'white',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            {availableYears.map(year => (
+                                <option key={year} value={year}>{year}년</option>
+                            ))}
+                        </select>
                     </div>
+
+                    <div style={{ marginBottom: '0.5rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.85rem', color: '#64748b', marginBottom: '0.5rem', fontWeight: '500' }}>헌금자 검색</label>
+                        <div className="search-bar" style={{ width: '100%', marginBottom: '1rem' }}>
+                            <Search size={16} />
+                            <input
+                                type="text"
+                                placeholder="이름 검색..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
                     <div className="donor-list" style={{ maxHeight: '400px', overflowY: 'auto' }}>
                         {filteredDonors.map(name => (
                             <div
@@ -103,7 +139,7 @@ function ReceiptsView({ transactions, donors }) {
                     {selectedDonor ? (
                         <div className="preview-content">
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                                <h3>{selectedDonor} 님의 기부 내역</h3>
+                                <h3>{selectedDonor} 님의 {selectedYear}년 기부 내역</h3>
                                 <button className="add-btn" onClick={generatePDF}>
                                     <Download size={18} /> PDF 다운로드
                                 </button>

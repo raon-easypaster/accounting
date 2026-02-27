@@ -1,5 +1,5 @@
-import React from 'react';
-import { Save, Upload, Cloud, RefreshCw, Trash2, Users, X, Download, AlertCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Save, Upload, Cloud, RefreshCw, Trash2, Users, X, Download, AlertCircle, Plus } from 'lucide-react';
 import { DONORS_LIST } from '../constants/ledgerConstants';
 
 function SettingsView({
@@ -11,6 +11,7 @@ function SettingsView({
     onSyncDrive, onLoadDrive, lastSyncTime, isSyncing,
     autoSync, setAutoSync
 }) {
+    const [newDonorName, setNewDonorName] = useState('');
     const exportData = () => {
         const data = { transactions, donors, budgets };
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -19,6 +20,17 @@ function SettingsView({
         link.href = url;
         link.download = `raon_church_ledger_backup_${new Date().toISOString().split('T')[0]}.json`;
         link.click();
+    };
+
+    const addDonor = () => {
+        const trimmed = newDonorName.trim();
+        if (!trimmed) return;
+        if (donors.includes(trimmed)) {
+            alert(`'${trimmed}' 님은 이미 명단에 있습니다.`);
+            return;
+        }
+        setDonors(prev => [...prev, trimmed].sort((a, b) => a.localeCompare(b, 'ko')));
+        setNewDonorName('');
     };
 
     const importData = (e) => {
@@ -228,8 +240,24 @@ function SettingsView({
                         <Users className="text-primary" /> 헌금자 명단 관리
                     </h3>
                     <p className="text-muted" style={{ fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-                        등록된 헌금자 명단을 확인하고 불필요한 이름을 삭제할 수 있습니다.
+                        등록된 헌금자 명단을 확인하고 새로운 이름을 추가하거나 삭제할 수 있습니다.
                     </p>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+                        <input
+                            type="text"
+                            value={newDonorName}
+                            onChange={(e) => setNewDonorName(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && addDonor()}
+                            placeholder="추가할 명단 이름 입력"
+                            style={{ flex: 1, padding: '0.75rem 1rem', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '0.9rem' }}
+                        />
+                        <button
+                            onClick={addDonor}
+                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '500' }}
+                        >
+                            <Plus size={18} /> 추가
+                        </button>
+                    </div>
                     <div className="donor-list-tags" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', maxHeight: '200px', overflowY: 'auto', padding: '1rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                         {donors.map(name => (
                             <div key={name} className="donor-tag" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.75rem', background: 'white', borderRadius: '20px', border: '1px solid #e2e8f0', fontSize: '0.85rem' }}>

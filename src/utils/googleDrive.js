@@ -7,6 +7,7 @@ let gapiInited = false;
 let gisInited = false;
 let initPromise = null;
 let currentClientId = null;
+let cachedFileId = null; // Cache file ID to reduce API calls
 
 export const GoogleDriveUtils = {
     // Initialize GAPI and GIS
@@ -170,6 +171,7 @@ export const GoogleDriveUtils = {
             window.gapi.client.setToken(null);
             console.log('Token revoked and cleared');
         }
+        cachedFileId = null;
     },
 
     // Search for existing data file
@@ -199,7 +201,16 @@ export const GoogleDriveUtils = {
     saveFile: async (content) => {
         console.log('GoogleDriveUtils.saveFile starting...');
         try {
-            const file = await GoogleDriveUtils.findFile();
+            let fileId = cachedFileId;
+
+            if (!fileId) {
+                const file = await GoogleDriveUtils.findFile();
+                if (file) {
+                    fileId = file.id;
+                    cachedFileId = file.id;
+                }
+            }
+
             const fileContent = JSON.stringify(content, null, 2);
             const boundary = '-------314159265358979323846';
             const delimiter = "\r\n--" + boundary + "\r\n";
@@ -221,11 +232,11 @@ export const GoogleDriveUtils = {
                 close_delim;
 
             let response;
-            if (file) {
-                console.log('Updating existing file:', file.id);
+            if (fileId) {
+                console.log('Updating existing file:', fileId);
                 // Update existing file using multipart
                 response = await window.gapi.client.request({
-                    path: `/upload/drive/v3/files/${file.id}`,
+                    path: `/upload/drive/v3/files/${fileId}`,
                     method: 'PATCH',
                     params: { uploadType: 'multipart' },
                     headers: {
@@ -245,6 +256,12 @@ export const GoogleDriveUtils = {
                     },
                     body: multipartRequestBody
                 });
+
+                // Cache the new file ID
+                if (response.result && response.result.id) {
+                    cachedFileId = response.result.id;
+                    console.log('New file created, cached ID:', cachedFileId);
+                }
             }
 
             console.log('Save response status:', response.status);
@@ -254,6 +271,7 @@ export const GoogleDriveUtils = {
             return response.result;
         } catch (error) {
             console.error('GoogleDriveUtils.saveFile Error:', error);
+            cachedFileId = null; // Reset cache on error in case file was deleted
             throw error;
         }
     }

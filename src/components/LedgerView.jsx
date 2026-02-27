@@ -304,6 +304,13 @@ function LedgerView({ transactions, setTransactions, deleteTransaction, updateTr
             .filter(tx => tx.type === 'expense' && tx.financeType === FINANCE_TYPES.SPECIAL)
             .reduce((sum, tx) => sum + tx.amount, 0);
 
+        const designatedIncome = sortedTransactions
+            .filter(tx => tx.type === 'income' && tx.financeType === FINANCE_TYPES.DESIGNATED)
+            .reduce((sum, tx) => sum + tx.amount, 0);
+        const designatedExpense = sortedTransactions
+            .filter(tx => tx.type === 'expense' && tx.financeType === FINANCE_TYPES.DESIGNATED)
+            .reduce((sum, tx) => sum + tx.amount, 0);
+
         return {
             generalIncome,
             generalExpense,
@@ -311,6 +318,9 @@ function LedgerView({ transactions, setTransactions, deleteTransaction, updateTr
             specialIncome,
             specialExpense,
             specialBalance: specialIncome - specialExpense,
+            designatedIncome,
+            designatedExpense,
+            designatedBalance: designatedIncome - designatedExpense,
             totalIncome: generalIncome + specialIncome,
             totalExpense: generalExpense + specialExpense,
             totalBalance: (generalIncome + specialIncome) - (generalExpense + specialExpense)
@@ -382,6 +392,7 @@ function LedgerView({ transactions, setTransactions, deleteTransaction, updateTr
                                             >
                                                 <option value={FINANCE_TYPES.GENERAL}>{FINANCE_TYPES.GENERAL}</option>
                                                 <option value={FINANCE_TYPES.SPECIAL}>{FINANCE_TYPES.SPECIAL}</option>
+                                                <option value={FINANCE_TYPES.DESIGNATED}>{FINANCE_TYPES.DESIGNATED}</option>
                                             </select>
                                         </div>
                                         <div className="form-group">
@@ -537,6 +548,7 @@ function LedgerView({ transactions, setTransactions, deleteTransaction, updateTr
                                 >
                                     <option value={FINANCE_TYPES.GENERAL}>{FINANCE_TYPES.GENERAL}</option>
                                     <option value={FINANCE_TYPES.SPECIAL}>{FINANCE_TYPES.SPECIAL}</option>
+                                    <option value={FINANCE_TYPES.DESIGNATED}>{FINANCE_TYPES.DESIGNATED}</option>
                                 </select>
                             </div>
 
@@ -643,6 +655,26 @@ function LedgerView({ transactions, setTransactions, deleteTransaction, updateTr
                         </div>
                     </div>
 
+                    <div className="subtotal-card" style={{ borderTop: '3px solid #ec4899' }}>
+                        <h4 style={{ fontSize: '0.85rem', color: '#ec4899', marginBottom: '0.5rem' }}>지정 재정 (별도)</h4>
+                        <div style={{ fontSize: '0.9rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                                <span>수입:</span>
+                                <span className="income-text">{subtotals.designatedIncome.toLocaleString()}원</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                                <span>지출:</span>
+                                <span className="expense-text">{subtotals.designatedExpense.toLocaleString()}원</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.5rem', borderTop: '1px solid #e2e8f0', fontWeight: 'bold' }}>
+                                <span>잔액:</span>
+                                <span style={{ color: subtotals.designatedBalance >= 0 ? '#10b981' : '#ef4444' }}>
+                                    {subtotals.designatedBalance.toLocaleString()}원
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
                     <div className="subtotal-card">
                         <h4 style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '0.5rem' }}>전체 합계</h4>
                         <div style={{ fontSize: '0.9rem' }}>
@@ -659,6 +691,9 @@ function LedgerView({ transactions, setTransactions, deleteTransaction, updateTr
                                 <span style={{ color: subtotals.totalBalance >= 0 ? '#10b981' : '#ef4444' }}>
                                     {subtotals.totalBalance.toLocaleString()}원
                                 </span>
+                            </div>
+                            <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '4px', textAlign: 'right' }}>
+                                * 지정재정 제외
                             </div>
                         </div>
                     </div>

@@ -31,43 +31,52 @@ ChartJS.register(
     ArcElement
 );
 
+import { FINANCE_TYPES } from '../constants/ledgerConstants';
+
 function DashboardView({ transactions, viewMode }) {
     const isYearly = viewMode === 'YEARLY';
     const periodLabel = isYearly ? '올해' : '이번 달';
 
     const stats = useMemo(() => {
-        // Since transactions are already filtered by date in App.jsx, 
-        // we aggregate everything passed here as the "current period"
+        // OVERALL TOTALS (Excluding Designated)
         const periodIncome = transactions
-            .filter(tx => tx.type === 'income')
+            .filter(tx => tx.type === 'income' && tx.financeType !== FINANCE_TYPES.DESIGNATED)
             .reduce((sum, tx) => sum + tx.amount, 0);
 
         const periodExpense = transactions
-            .filter(tx => tx.type === 'expense')
+            .filter(tx => tx.type === 'expense' && tx.financeType !== FINANCE_TYPES.DESIGNATED)
             .reduce((sum, tx) => sum + tx.amount, 0);
 
         const totalIncome = transactions
-            .filter(tx => tx.type === 'income')
+            .filter(tx => tx.type === 'income' && tx.financeType !== FINANCE_TYPES.DESIGNATED)
             .reduce((sum, tx) => sum + tx.amount, 0);
 
         const totalExpense = transactions
-            .filter(tx => tx.type === 'expense')
+            .filter(tx => tx.type === 'expense' && tx.financeType !== FINANCE_TYPES.DESIGNATED)
             .reduce((sum, tx) => sum + tx.amount, 0);
 
         const specialIncome = transactions
-            .filter(tx => tx.type === 'income' && tx.financeType === '특별재정')
+            .filter(tx => tx.type === 'income' && tx.financeType === FINANCE_TYPES.SPECIAL)
             .reduce((sum, tx) => sum + tx.amount, 0);
 
         const generalIncome = transactions
-            .filter(tx => tx.type === 'income' && tx.financeType === '일반재정')
+            .filter(tx => tx.type === 'income' && tx.financeType === FINANCE_TYPES.GENERAL)
+            .reduce((sum, tx) => sum + tx.amount, 0);
+
+        const designatedIncome = transactions
+            .filter(tx => tx.type === 'income' && tx.financeType === FINANCE_TYPES.DESIGNATED)
             .reduce((sum, tx) => sum + tx.amount, 0);
 
         const specialExpense = transactions
-            .filter(tx => tx.type === 'expense' && tx.financeType === '특별재정')
+            .filter(tx => tx.type === 'expense' && tx.financeType === FINANCE_TYPES.SPECIAL)
             .reduce((sum, tx) => sum + tx.amount, 0);
 
         const generalExpense = transactions
-            .filter(tx => tx.type === 'expense' && tx.financeType === '일반재정')
+            .filter(tx => tx.type === 'expense' && tx.financeType === FINANCE_TYPES.GENERAL)
+            .reduce((sum, tx) => sum + tx.amount, 0);
+
+        const designatedExpense = transactions
+            .filter(tx => tx.type === 'expense' && tx.financeType === FINANCE_TYPES.DESIGNATED)
             .reduce((sum, tx) => sum + tx.amount, 0);
 
         const periodCarryover = transactions
@@ -85,12 +94,16 @@ function DashboardView({ transactions, viewMode }) {
             totalExpense,
             specialIncome,
             generalIncome,
+            designatedIncome,
             specialExpense,
             generalExpense,
+            designatedExpense,
             periodCarryover,
             totalCarryover,
             periodPureIncome: periodIncome - periodCarryover,
-            totalPureIncome: totalIncome - totalCarryover
+            totalPureIncome: totalIncome - totalCarryover,
+            generalBalance: generalIncome - generalExpense,
+            specialBalance: specialIncome - specialExpense
         };
     }, [transactions]);
 
@@ -150,7 +163,15 @@ function DashboardView({ transactions, viewMode }) {
 
         const dateStr = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
         const balanceV = stats.totalIncome - stats.totalExpense;
+        const designatedBalanceV = stats.designatedIncome - stats.designatedExpense;
         const assetsV = 10000000;
+
+        // Custom Calculations for Special Finance
+        const raonTreeExpense = transactions
+            .filter(tx => tx.financeType === FINANCE_TYPES.SPECIAL && tx.type === 'expense' && tx.category === '라온트리지원(월세/관리)')
+            .reduce((sum, tx) => sum + tx.amount, 0);
+        const missionServiceExpense = stats.specialExpense - raonTreeExpense;
+        const seedOfferingBalance = stats.specialBalance; // User calls Special Balance 'Seed Offering Balance'
 
         const incomeTableRows = Object.entries(incomeByCategory).map(([cat, amt]) => `
             <tr><td>${cat}</td><td class="amount">${amt.toLocaleString()} 원</td></tr>
@@ -184,16 +205,18 @@ function DashboardView({ transactions, viewMode }) {
                     .report-wrapper { max-width: 850px; margin: 0 auto; }
                     h1 { text-align: center; margin-bottom: 5px; }
                     .period { text-align: center; font-size: 1.4rem; font-weight: bold; margin-bottom: 30px; }
-                    .section { margin-bottom: 40px; page-break-inside: avoid; }
-                    .section-title { font-size: 1.2rem; font-weight: bold; border-left: 5px solid #000; padding-left: 10px; margin-bottom: 10px; }
+                    .section { margin-bottom: 30px; page-break-inside: avoid; }
+                    .section-title { font-size: 1.1rem; font-weight: bold; border-left: 4px solid #3b82f6; padding-left: 10px; margin-bottom: 10px; color: #1e293b; }
                     table { width: 100%; border-collapse: collapse; margin-bottom: 5px; table-layout: fixed; }
-                    th, td { border: 1px solid #000; padding: 8px; font-size: 0.9rem; }
-                    th { background: #f8fafc; }
+                    th, td { border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.9rem; }
+                    th { background: #f8fafc; text-align: left; font-weight: 600; color: #475569; }
                     .amount { text-align: right; }
                     .total-row { background: #f1f5f9; font-weight: bold; }
-                    .footer { margin-top: 60px; text-align: center; }
-                    .sign { margin-top: 40px; display: flex; justify-content: center; gap: 50px; }
-                    .ver { font-size: 0.7rem; color: #ccc; text-align: right; margin-top: 20px; }
+                    .sub-label { color: #64748b; font-size: 0.85rem; }
+                    .positive { color: #059669; }
+                    .negative { color: #ef4444; }
+                    .footer { margin-top: 50px; text-align: center; color: #64748b; }
+                    .sign { margin-top: 30px; display: flex; justify-content: center; gap: 50px; }
                 </style>
             </head>
             <body>
@@ -202,37 +225,91 @@ function DashboardView({ transactions, viewMode }) {
                     <div class="period">${periodStr}</div>
                     
                     <div class="section">
-                        <div class="section-title">1. 종합 재정 현황</div>
+                        <div class="section-title">1. 특별재정 (씨앗헌금)</div>
                         <table>
-                            <tr><th style="width: 70%">항목</th><th>금액</th></tr>
-                            <tr style="background: #eff6ff"><td><strong>[수입 총합계]</strong> (이월금 포함)</td><td class="amount"><strong>${stats.totalIncome.toLocaleString()} 원</strong></td></tr>
-                            <tr style="color: #64748b"><td>- 당기 순수입 (이월금 제외)</td><td class="amount">${stats.totalPureIncome.toLocaleString()} 원</td></tr>
-                            <tr style="color: #64748b"><td>- 전년 이월금 합계</td><td class="amount">${stats.totalCarryover.toLocaleString()} 원</td></tr>
-                            <tr style="background: #fef2f2"><td><strong>[지출 총합계]</strong></td><td class="amount"><strong>${stats.totalExpense.toLocaleString()} 원</strong></td></tr>
-                            <tr class="total-row" style="background: #f0fdf4"><td><strong>[현재 잔액]</strong> (가용 자산)</td><td class="amount">${balanceV.toLocaleString()} 원</td></tr>
+                             <tr><th style="width: 60%">항목</th><th style="width: 40%">금액</th></tr>
+                             <tr>
+                                <td>선교와 섬김 <span class="sub-label">(라온트리 지원 제외)</span></td>
+                                <td class="amount">${missionServiceExpense.toLocaleString()} 원</td>
+                             </tr>
+                             <tr>
+                                <td>라온트리 지원</td>
+                                <td class="amount">${raonTreeExpense.toLocaleString()} 원</td>
+                             </tr>
+                             <tr class="total-row" style="background: #eff6ff">
+                                <td><strong>씨앗헌금 잔액</strong></td>
+                                <td class="amount ${seedOfferingBalance >= 0 ? 'positive' : 'negative'}"><strong>${seedOfferingBalance.toLocaleString()} 원</strong></td>
+                             </tr>
                         </table>
                     </div>
 
                     <div class="section">
-                        <div class="section-title">2. 항목별 수입 내역</div>
+                        <div class="section-title">2. 지정헌금</div>
                         <table>
-                            <tr><th>항목(계정)</th><th>금액</th></tr>
+                             <tr><th style="width: 60%">항목</th><th style="width: 40%">금액</th></tr>
+                             <tr class="total-row">
+                                <td><strong>지정헌금 잔액</strong></td>
+                                <td class="amount ${designatedBalanceV >= 0 ? 'positive' : 'negative'}"><strong>${designatedBalanceV.toLocaleString()} 원</strong></td>
+                             </tr>
+                        </table>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-title">3. 교회 자산</div>
+                        <table>
+                             <tr><th style="width: 60%">항목</th><th style="width: 40%">금액</th></tr>
+                             <tr>
+                                <td>보증금</td>
+                                <td class="amount">${assetsV.toLocaleString()} 원</td>
+                             </tr>
+                        </table>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-title">4. 일반재정</div>
+                        <table>
+                             <tr><th style="width: 60%">항목</th><th style="width: 40%">금액</th></tr>
+                             <tr>
+                                <td>일반재정 수입</td>
+                                <td class="amount">${stats.generalIncome.toLocaleString()} 원</td>
+                             </tr>
+                             <tr>
+                                <td>일반재정 지출</td>
+                                <td class="amount">${stats.generalExpense.toLocaleString()} 원</td>
+                             </tr>
+                             <tr class="total-row" style="background: #fff7ed">
+                                <td><strong>일반재정 잔액</strong></td>
+                                <td class="amount ${stats.generalBalance >= 0 ? 'positive' : 'negative'}"><strong>${stats.generalBalance.toLocaleString()} 원</strong></td>
+                             </tr>
+                        </table>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-title">5. 전체 합계</div>
+                        <table>
+                             <tr class="total-row" style="background: #f0fdf4; font-size: 1.1rem;">
+                                <td style="width: 60%"><strong>전체 잔액 (일반+특별)</strong></td>
+                                <td style="width: 40%" class="amount ${balanceV >= 0 ? 'positive' : 'negative'}"><strong>${balanceV.toLocaleString()} 원</strong></td>
+                             </tr>
+                        </table>
+                        <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 8px; text-align: right;">* 전체 잔액은 지정헌금 및 보증금을 제외한 운영 자금 합계입니다.</p>
+                    </div>
+
+                    <div class="section" style="margin-top: 40px; border-top: 2px dashed #cbd5e1; padding-top: 30px;">
+                        <div class="section-title">부록: 상세 내역</div>
+                        <h3 style="font-size: 1rem; margin-bottom: 10px;">항목별 수입</h3>
+                        <table>
+                            <tr><th>항목</th><th>금액</th></tr>
                             ${incomeTableRows || '<tr><td colspan="2" style="text-align:center">내역 없음</td></tr>'}
-                            <tr class="total-row"><td>수입 합계</td><td class="amount">${stats.totalIncome.toLocaleString()} 원</td></tr>
                         </table>
-                    </div>
-
-                    <div class="section">
-                        <div class="section-title">3. 항목별 지출 내역</div>
+                        
+                        <h3 style="font-size: 1rem; margin-top: 20px; margin-bottom: 10px;">항목별 지출</h3>
                         <table>
-                            <tr><th>항목(계정)</th><th>금액</th></tr>
+                            <tr><th>항목</th><th>금액</th></tr>
                             ${expenseTableRows || '<tr><td colspan="2" style="text-align:center">내역 없음</td></tr>'}
-                            <tr class="total-row"><td>지출 합계</td><td class="amount">${stats.totalExpense.toLocaleString()} 원</td></tr>
                         </table>
-                    </div>
 
-                    <div class="section">
-                        <div class="section-title">4. 지출부 상세 내역</div>
+                        <h3 style="font-size: 1rem; margin-top: 20px; margin-bottom: 10px;">지출부 상세</h3>
                         <table style="font-size: 0.8rem">
                             <thead>
                                 <tr><th style="width: 15%">일자</th><th style="width: 20%">항목</th><th style="width: 15%">성명</th><th style="width: 20%">금액</th><th>비고</th></tr>
@@ -243,23 +320,13 @@ function DashboardView({ transactions, viewMode }) {
                         </table>
                     </div>
 
-                    <div class="section">
-                        <div class="section-title">5. 교회 자산 현황</div>
-                        <table>
-                            <tr><td>부동산 임대보증금</td><td class="amount">${assetsV.toLocaleString()} 원</td></tr>
-                            <tr class="total-row"><td>총 자산 (잔액+보증금)</td><td class="amount">${(balanceV + assetsV).toLocaleString()} 원</td></tr>
-                        </table>
-                    </div>
-
                     <div class="footer">
-                        <p>위와 같이 보고합니다.</p>
                         <p>${dateStr}</p>
                         <div class="sign">
                             <span>재정 위원: ____________ (인)</span>
                             <span>담임 목사: ____________ (인)</span>
                         </div>
                     </div>
-                    <div class="ver">ver 1.2</div>
                 </div>
             </body>
             </html>
@@ -306,6 +373,7 @@ function DashboardView({ transactions, viewMode }) {
                         <div style={{ display: 'flex', gap: '8px', fontSize: '0.8rem', marginTop: '2px' }}>
                             <span style={{ color: '#6366f1' }}>일반: {stats.generalIncome.toLocaleString()}</span>
                             <span style={{ color: '#8b5cf6' }}>특별: {stats.specialIncome.toLocaleString()}</span>
+                            <span style={{ color: '#ec4899' }}>지정: {stats.designatedIncome.toLocaleString()}</span>
                         </div>
                     </div>
                 </div>
@@ -316,18 +384,27 @@ function DashboardView({ transactions, viewMode }) {
                         <div className="stat-icon expense"><TrendingDown size={16} /></div>
                     </div>
                     <div className="stat-value">₩ {stats.periodExpense.toLocaleString()}</div>
-                    <div className="stat-footer negative">
-                        <ArrowDownRight size={14} /> 지출 관리 필요
+                    <div className="stat-footer" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
+                        <div style={{ display: 'flex', gap: '8px', fontSize: '0.8rem' }}>
+                            <span style={{ color: '#6366f1' }}>일반: {stats.generalExpense.toLocaleString()}</span>
+                            <span style={{ color: '#8b5cf6' }}>특별: {stats.specialExpense.toLocaleString()}</span>
+                            <span style={{ color: '#ec4899' }}>지정: {stats.designatedExpense.toLocaleString()}</span>
+                        </div>
                     </div>
                 </div>
 
                 <div className="stat-card">
                     <div className="stat-header">
-                        <span className="stat-label">현재 잔액</span>
+                        <span className="stat-label">현재 잔액 (일반+특별)</span>
                         <div className="stat-icon balance"><Wallet size={16} /></div>
                     </div>
                     <div className="stat-value primary">₩ {(stats.totalIncome - stats.totalExpense).toLocaleString()}</div>
-                    <div className="stat-footer text-muted">전체 누적 기준</div>
+                    <div className="stat-footer" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
+                        <div style={{ display: 'flex', gap: '8px', fontSize: '0.8rem' }}>
+                            <span style={{ color: '#6366f1' }}>일반: {stats.generalBalance.toLocaleString()}</span>
+                            <span style={{ color: '#8b5cf6' }}>특별: {stats.specialBalance.toLocaleString()}</span>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="stat-card" style={{ borderLeft: '4px solid #f59e0b' }}>

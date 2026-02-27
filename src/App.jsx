@@ -65,10 +65,27 @@ function App() {
                 if (Array.isArray(loaded)) {
                     // Migration: Convert '전년이월금' to '일반이월금' or '특별이월금'
                     const migrated = loaded.map(tx => {
+                        // Migration: Convert '전년이월금' to '일반이월금' or '특별이월금'
                         if (tx.category === '전년이월금') {
                             return {
                                 ...tx,
                                 category: tx.financeType === '특별재정' ? '특별이월금' : '일반이월금'
+                            };
+                        }
+                        // Migration: Move '지정헌금' from '특별재정' to '지정재정' and rename to '기타지정헌금'
+                        if (tx.category === '지정헌금') {
+                            return {
+                                ...tx,
+                                financeType: '지정재정',
+                                category: '기타지정헌금'
+                            };
+                        }
+                        // Migration: Rename '지정지출' to '기타지정지출'
+                        if (tx.category === '지정지출') {
+                            return {
+                                ...tx,
+                                financeType: '지정재정',
+                                category: '기타지정지출'
                             };
                         }
                         return tx;

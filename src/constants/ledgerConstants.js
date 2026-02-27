@@ -4,7 +4,8 @@ export const DONORS_LIST = [
 
 export const FINANCE_TYPES = {
     GENERAL: '일반재정',
-    SPECIAL: '특별재정'
+    SPECIAL: '특별재정',
+    DESIGNATED: '지정재정'
 };
 
 export const INCOME_CATEGORIES = {
@@ -12,7 +13,7 @@ export const INCOME_CATEGORIES = {
         "특별이월금",
         "씨앗헌금(특별)",
         "선교헌금",
-        "지정헌금"
+        "목적헌금"
     ],
     '일반재정': [
         "일반이월금",
@@ -20,6 +21,12 @@ export const INCOME_CATEGORIES = {
         "기타헌금",
         "잡수익",
         "기타수입"
+    ],
+    '지정재정': [
+        "건축헌금",
+        "선교헌금(지정)",
+        "기타지정헌금",
+        "직접입력"
     ]
 };
 
@@ -36,7 +43,8 @@ export const EXPENSE_CATEGORIES = {
         "지역봉사/지방회지원",
         "신학생지원",
         "교역자회비/단기선교",
-        "라온트리 사역"
+        "라온트리 사역",
+        "목적지출"
     ],
     '일반재정': [
         "퇴직적립금(후원금)",
@@ -53,6 +61,12 @@ export const EXPENSE_CATEGORIES = {
         "목회비",
         "목회자사례비",
         "예비비"
+    ],
+    '지정재정': [
+        "건축지출",
+        "선교지출(지정)",
+        "기타지정지출",
+        "직접입력"
     ]
 };
 
