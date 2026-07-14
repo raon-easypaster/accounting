@@ -164,9 +164,9 @@ function DashboardView({ transactions, viewMode }) {
         const dateStr = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
         const balanceV = stats.totalIncome - stats.totalExpense;
         const designatedBalanceV = stats.designatedIncome - stats.designatedExpense;
-        const churchLoan = 216000000;
+        const bankLoan = 216000000;
         const districtLoan = 10000000;
-        const totalLiabilities = churchLoan + districtLoan;
+        const totalLiabilities = bankLoan + districtLoan;
 
         // Custom Calculations for Special Finance
         const raonTreeExpense = transactions
@@ -260,8 +260,8 @@ function DashboardView({ transactions, viewMode }) {
                         <table>
                              <tr><th style="width: 60%">항목</th><th style="width: 40%">금액</th></tr>
                              <tr>
-                                <td>교회 대출금</td>
-                                <td class="amount">${churchLoan.toLocaleString()} 원</td>
+                                <td>은행 대출금</td>
+                                <td class="amount">${bankLoan.toLocaleString()} 원</td>
                              </tr>
                              <tr>
                                 <td>지방회 대출금</td>
@@ -424,7 +424,7 @@ function DashboardView({ transactions, viewMode }) {
                     <div className="stat-value" style={{ color: '#ef4444' }}>₩ 226,000,000</div>
                     <div className="stat-footer" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
                         <div style={{ display: 'flex', gap: '8px', fontSize: '0.8rem' }}>
-                            <span style={{ color: '#ef4444' }}>교회: 216,000,000</span>
+                            <span style={{ color: '#ef4444' }}>은행: 216,000,000</span>
                             <span style={{ color: '#f97316' }}>지방회: 10,000,000</span>
                         </div>
                     </div>
