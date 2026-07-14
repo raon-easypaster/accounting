@@ -164,7 +164,9 @@ function DashboardView({ transactions, viewMode }) {
         const dateStr = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
         const balanceV = stats.totalIncome - stats.totalExpense;
         const designatedBalanceV = stats.designatedIncome - stats.designatedExpense;
-        const assetsV = 10000000;
+        const churchLoan = 216000000;
+        const districtLoan = 10000000;
+        const totalLiabilities = churchLoan + districtLoan;
 
         // Custom Calculations for Special Finance
         const raonTreeExpense = transactions
@@ -253,14 +255,21 @@ function DashboardView({ transactions, viewMode }) {
                              </tr>
                         </table>
                     </div>
-
                     <div class="section">
-                        <div class="section-title">3. 교회 자산</div>
+                        <div class="section-title">3. 교회 부채 (대출금)</div>
                         <table>
                              <tr><th style="width: 60%">항목</th><th style="width: 40%">금액</th></tr>
                              <tr>
-                                <td>보증금</td>
-                                <td class="amount">${assetsV.toLocaleString()} 원</td>
+                                <td>교회 대출금</td>
+                                <td class="amount">${churchLoan.toLocaleString()} 원</td>
+                             </tr>
+                             <tr>
+                                <td>지방회 대출금</td>
+                                <td class="amount">${districtLoan.toLocaleString()} 원</td>
+                             </tr>
+                             <tr class="total-row" style="background: #fef2f2">
+                                <td><strong>부채 합계</strong></td>
+                                <td class="amount" style="color: #ef4444"><strong>${totalLiabilities.toLocaleString()} 원</strong></td>
                              </tr>
                         </table>
                     </div>
@@ -292,7 +301,7 @@ function DashboardView({ transactions, viewMode }) {
                                 <td style="width: 40%" class="amount ${balanceV >= 0 ? 'positive' : 'negative'}"><strong>${balanceV.toLocaleString()} 원</strong></td>
                              </tr>
                         </table>
-                        <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 8px; text-align: right;">* 전체 잔액은 지정헌금 및 보증금을 제외한 운영 자금 합계입니다.</p>
+                        <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 8px; text-align: right;">* 전체 잔액은 지정헌금을 제외한 운영 자금 합계입니다.</p>
                     </div>
 
                     <div class="section" style="margin-top: 40px; border-top: 2px dashed #cbd5e1; padding-top: 30px;">
@@ -407,14 +416,17 @@ function DashboardView({ transactions, viewMode }) {
                     </div>
                 </div>
 
-                <div className="stat-card" style={{ borderLeft: '4px solid #f59e0b' }}>
+                <div className="stat-card" style={{ borderLeft: '4px solid #ef4444' }}>
                     <div className="stat-header">
-                        <span className="stat-label">교회 자산 (부동산)</span>
-                        <div className="stat-icon" style={{ background: '#fef3c7', color: '#d97706' }}><Building size={16} /></div>
+                        <span className="stat-label">교회 부채 (대출금)</span>
+                        <div className="stat-icon" style={{ background: '#fef2f2', color: '#ef4444' }}><Building size={16} /></div>
                     </div>
-                    <div className="stat-value" style={{ color: '#d97706' }}>₩ 10,000,000</div>
-                    <div className="stat-footer text-muted">
-                        임대 보증금
+                    <div className="stat-value" style={{ color: '#ef4444' }}>₩ 226,000,000</div>
+                    <div className="stat-footer" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
+                        <div style={{ display: 'flex', gap: '8px', fontSize: '0.8rem' }}>
+                            <span style={{ color: '#ef4444' }}>교회: 216,000,000</span>
+                            <span style={{ color: '#f97316' }}>지방회: 10,000,000</span>
+                        </div>
                     </div>
                 </div>
             </div>
