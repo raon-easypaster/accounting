@@ -18,12 +18,12 @@ function LedgerView({ transactions, setTransactions, deleteTransaction, updateTr
     const [showForm, setShowForm] = useState(false);
     const [showEditForm, setShowEditForm] = useState(false);
     const [editingTx, setEditingTx] = useState(null);
-    const [txType, setTxType] = useState('income');
     const [sortBy, setSortBy] = useState('date');
     const [sortOrder, setSortOrder] = useState('desc');
     const [rows, setRows] = useState(Array.from({ length: 10 }, (_, i) => ({
         id: Date.now() + i,
         date: new Date().toISOString().split('T')[0],
+        type: 'income',
         financeType: FINANCE_TYPES.GENERAL,
         category: '',
         name: '',
@@ -40,6 +40,7 @@ function LedgerView({ transactions, setTransactions, deleteTransaction, updateTr
             return [...prev, {
                 id: Date.now(),
                 date: lastRow?.date || new Date().toISOString().split('T')[0],
+                type: lastRow?.type || 'income',
                 financeType: lastRow?.financeType || FINANCE_TYPES.GENERAL,
                 category: '',
                 name: '',
@@ -70,7 +71,7 @@ function LedgerView({ transactions, setTransactions, deleteTransaction, updateTr
         const newTxs = rows.map(row => ({
             id: row.id,
             date: row.date,
-            type: txType,
+            type: row.type,
             financeType: row.financeType,
             category: row.category,
             name: row.isCustomName ? row.customName : row.name,
@@ -212,6 +213,7 @@ function LedgerView({ transactions, setTransactions, deleteTransaction, updateTr
         setRows(Array.from({ length: 10 }, (_, i) => ({
             id: Date.now() + i,
             date: new Date().toISOString().split('T')[0],
+            type: 'income',
             financeType: FINANCE_TYPES.GENERAL,
             category: '',
             name: '',
@@ -354,23 +356,9 @@ function LedgerView({ transactions, setTransactions, deleteTransaction, updateTr
 
             {showForm && (
                 <div className="modal-overlay">
-                    <div className="modal-content">
+                    <div className="modal-content" style={{ maxWidth: '95%', width: '1200px' }}>
                         <div className="modal-header">
-                            <h3>새로운 {txType === 'income' ? '수입' : '지출'} 추가</h3>
-                            <div className="type-toggle">
-                                <button
-                                    className={txType === 'income' ? 'active' : ''}
-                                    onClick={() => setTxType('income')}
-                                >
-                                    수입
-                                </button>
-                                <button
-                                    className={txType === 'expense' ? 'active' : ''}
-                                    onClick={() => setTxType('expense')}
-                                >
-                                    지출
-                                </button>
-                            </div>
+                            <h3>새로운 기록 추가</h3>
                         </div>
 
                         <form onSubmit={handleAddTxs} className="ledger-form bulk-form">
@@ -384,6 +372,18 @@ function LedgerView({ transactions, setTransactions, deleteTransaction, updateTr
                                                 value={row.date}
                                                 onChange={(e) => updateRow(row.id, 'date', e.target.value)}
                                             />
+                                        </div>
+                                        <div className="form-group type-col">
+                                            <select
+                                                value={row.type}
+                                                onChange={(e) => {
+                                                    updateRow(row.id, 'type', e.target.value);
+                                                    updateRow(row.id, 'category', ''); // Reset category on type change
+                                                }}
+                                            >
+                                                <option value="income">수입</option>
+                                                <option value="expense">지출</option>
+                                            </select>
                                         </div>
                                         <div className="form-group">
                                             <select
@@ -401,14 +401,14 @@ function LedgerView({ transactions, setTransactions, deleteTransaction, updateTr
                                                 onChange={(e) => updateRow(row.id, 'category', e.target.value)}
                                             >
                                                 <option value="">항목선택</option>
-                                                {(txType === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES)[row.financeType].map(cat => (
+                                                {(row.type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES)[row.financeType].map(cat => (
                                                     <option key={cat} value={cat}>{cat}</option>
                                                 ))}
                                             </select>
                                         </div>
 
                                         <div className="form-group name-col">
-                                            {txType === 'income' ? (
+                                            {row.type === 'income' ? (
                                                 <div className="searchable-name-container">
                                                     <input
                                                         type="text"
