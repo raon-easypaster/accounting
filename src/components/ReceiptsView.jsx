@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Printer, FileText, Download } from 'lucide-react';
+import { Search, Printer, FileText, Download, ArrowUpDown } from 'lucide-react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
@@ -31,6 +31,41 @@ function ReceiptsView({ transactions, donors }) {
         return { transactions: donorTxs, total };
     }, [selectedDonor, transactions, selectedYear]);
 
+    const [sortBy, setSortBy] = useState('date');
+    const [sortOrder, setSortOrder] = useState('desc');
+
+    const handleSort = (column) => {
+        if (sortBy === column) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(column);
+            setSortOrder('asc');
+        }
+    };
+
+    const sortedTransactions = useMemo(() => {
+        if (!donorStats) return [];
+        return [...donorStats.transactions].sort((a, b) => {
+            let aVal = a[sortBy];
+            let bVal = b[sortBy];
+
+            if (sortBy === 'amount') {
+                aVal = Number(aVal || 0);
+                bVal = Number(bVal || 0);
+            } else if (sortBy === 'date') {
+                aVal = new Date(aVal);
+                bVal = new Date(bVal);
+            } else {
+                aVal = String(aVal || '').toLowerCase();
+                bVal = String(bVal || '').toLowerCase();
+            }
+
+            if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+            if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }, [donorStats, sortBy, sortOrder]);
+
     const generatePDF = () => {
         if (!selectedDonor || !donorStats) return;
 
@@ -45,7 +80,7 @@ function ReceiptsView({ transactions, donors }) {
         doc.text(`발행년도: ${selectedYear}년`, 20, 60);
         doc.text(`발행일자: ${new Date().toLocaleDateString()}`, 20, 70);
 
-        const tableData = donorStats.transactions.map(tx => [
+        const tableData = sortedTransactions.map(tx => [
             tx.date,
             tx.financeType || '-',
             tx.category,
@@ -159,14 +194,22 @@ function ReceiptsView({ transactions, donors }) {
                             <table className="ledger-table">
                                 <thead>
                                     <tr>
-                                        <th>날짜</th>
-                                        <th>재정구분</th>
-                                        <th>항목</th>
-                                        <th className="text-right">금액</th>
+                                        <th onClick={() => handleSort('date')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                                            날짜 <ArrowUpDown size={14} style={{ display: 'inline', opacity: sortBy === 'date' ? 1 : 0.3 }} />
+                                        </th>
+                                        <th onClick={() => handleSort('financeType')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                                            재정구분 <ArrowUpDown size={14} style={{ display: 'inline', opacity: sortBy === 'financeType' ? 1 : 0.3 }} />
+                                        </th>
+                                        <th onClick={() => handleSort('category')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                                            항목 <ArrowUpDown size={14} style={{ display: 'inline', opacity: sortBy === 'category' ? 1 : 0.3 }} />
+                                        </th>
+                                        <th className="text-right" onClick={() => handleSort('amount')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                                            금액 <ArrowUpDown size={14} style={{ display: 'inline', opacity: sortBy === 'amount' ? 1 : 0.3 }} />
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {donorStats.transactions.map(tx => (
+                                    {sortedTransactions.map(tx => (
                                         <tr key={tx.id}>
                                             <td>{tx.date}</td>
                                             <td className="text-muted" style={{ fontSize: '0.8rem' }}>{tx.financeType || '-'}</td>
