@@ -311,14 +311,16 @@
 
 /* Bulk Entry Styles */
 .bulk-form {
-    max-width: 1000px !important;
+    max-width: 100% !important;
 }
 
 .modal-content:has(.bulk-form) {
-    max-width: 1100px;
+    max-width: 1400px;
+    width: 95%;
     max-height: 90vh;
     display: flex;
     flex-direction: column;
+    padding: 1.5rem 2rem;
 }
 
 .bulk-rows-container {

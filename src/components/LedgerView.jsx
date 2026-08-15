@@ -356,7 +356,7 @@ function LedgerView({ transactions, setTransactions, deleteTransaction, updateTr
 
             {showForm && (
                 <div className="modal-overlay">
-                    <div className="modal-content" style={{ maxWidth: '95%', width: '1200px' }}>
+                    <div className="modal-content" style={{ maxWidth: '95%', width: '1400px' }}>
                         <div className="modal-header">
                             <h3>새로운 기록 추가</h3>
                         </div>
